@@ -12,65 +12,89 @@ import MachO
 import Foundation
 
 enum JailbreakInspector {
-  static func detect(options: JailbreakCheckOptions) throws {
+  struct Environment {
+    let fileExists: (String) -> Bool
+    let writeString: (String, URL) throws -> Void
+    let removeItem: (URL) throws -> Void
+    let loadedImageNames: () -> [String]
+
+    static let live = Environment(
+      fileExists: { path in
+        FileManager.default.fileExists(atPath: path)
+      },
+      writeString: { string, url in
+        try string.write(to: url, atomically: true, encoding: .utf8)
+      },
+      removeItem: { url in
+        try FileManager.default.removeItem(at: url)
+      },
+      loadedImageNames: {
+        JailbreakInspector.loadedDynamicLibraryImageNames()
+      }
+    )
+  }
+
+  static func detect(options: JailbreakCheckOptions, environment: Environment = .live) throws {
     if options.contains(.filePathChecks) {
-      try checkSuspiciousAppPaths()
-      try checkSuspiciousSystemPaths()
-      try checkJailbreakFilePaths()
+      try checkSuspiciousAppPaths(environment: environment)
+      try checkSuspiciousSystemPaths(environment: environment)
+      try checkJailbreakFilePaths(environment: environment)
     }
 
     if options.contains(.sandboxWrite) {
-      try sandboxWriteTest(path: "/private/\(UUID().uuidString)")
+      try sandboxWriteTest(path: "/private/\(UUID().uuidString)", environment: environment)
     }
 
     if options.contains(.systemWrite) {
-      try sandboxWriteTest(path: "/jb_sys_\(UUID().uuidString)")
+      try sandboxWriteTest(path: "/jb_sys_\(UUID().uuidString)", environment: environment)
     }
 
     if options.contains(.dyldScan) {
-      try checkLoadedDynamicLibraries()
+      try checkLoadedDynamicLibraries(environment: environment)
     }
   }
 
   // MARK: - Checks
-  private static func checkSuspiciousAppPaths() throws {
+  private static func checkSuspiciousAppPaths(environment: Environment) throws {
     for path in suspiciousAppPaths {
-      if FileManager.default.fileExists(atPath: path) {
+      if environment.fileExists(path) {
         throw JailbreakDetectionError.suspiciousApplication(path: path)
       }
     }
   }
 
-  private static func checkSuspiciousSystemPaths() throws {
+  private static func checkSuspiciousSystemPaths(environment: Environment) throws {
     for path in suspiciousSystemPaths {
-      if FileManager.default.fileExists(atPath: path) {
+      if environment.fileExists(path) {
         throw JailbreakDetectionError.suspiciousSystemPath(path: path)
       }
     }
   }
 
-  private static func checkJailbreakFilePaths() throws {
+  private static func checkJailbreakFilePaths(environment: Environment) throws {
     for path in jailbreakFilePaths {
-      if FileManager.default.fileExists(atPath: path) {
+      if environment.fileExists(path) {
         throw JailbreakDetectionError.suspiciousFile(path: path)
       }
     }
   }
 
-  private static func sandboxWriteTest(path: String) throws {
+  private static func sandboxWriteTest(path: String, environment: Environment) throws {
+    let url = URL(fileURLWithPath: path)
+
     do {
-      try "jailbreak".write(toFile: path, atomically: true, encoding: .utf8)
+      try environment.writeString("jailbreak", url)
     } catch {
       return
     }
 
-    try? FileManager.default.removeItem(atPath: path)
+    try? environment.removeItem(url)
     throw JailbreakDetectionError.sandboxWriteSucceeded(path: path)
   }
 
   // MARK: - Datasets
 
-  private static let suspiciousAppPaths: Set<String> = [
+  private static let suspiciousAppPaths: [String] = [
     // Traditional jailbreaks
     "/Applications/Cydia.app",
     "/Applications/blackra1n.app",
@@ -98,7 +122,7 @@ enum JailbreakInspector {
     "/var/jb/Applications/Zebra.app"
   ]
 
-  private static let suspiciousSystemPaths: Set<String> = [
+  private static let suspiciousSystemPaths: [String] = [
     // Traditional paths
     "/Library/MobileSubstrate/DynamicLibraries/LiveClock.plist",
     "/Library/MobileSubstrate/DynamicLibraries/Veency.plist",
@@ -142,7 +166,7 @@ enum JailbreakInspector {
     "/var/jb/var"
   ]
 
-  private static let jailbreakFilePaths: Set<String> = [
+  private static let jailbreakFilePaths: [String] = [
     "/bin/sh",
     "/etc/ssh/sshd_config",
     "/usr/sbin/frida-server",
@@ -152,7 +176,7 @@ enum JailbreakInspector {
     "/var/tmp/cydia.log"
   ]
 
-  private static let suspiciousDynamicLibraryNames: Set<String> = [
+  private static let suspiciousDynamicLibraryNames: [String] = [
     "systemhook.dylib",
     "roothideinit.dylib",
     "SubstrateLoader.dylib",
@@ -176,16 +200,40 @@ enum JailbreakInspector {
     "tweaksupport.dylib"
   ]
 
-  private static func checkLoadedDynamicLibraries() throws {
-    #if canImport(MachO)
-    for index in 0..<_dyld_image_count() {
-      let imageName = String(cString: _dyld_get_image_name(index))
+  private static let suspiciousDynamicLibraryNameLookup: [String: String] = Dictionary(
+    uniqueKeysWithValues: suspiciousDynamicLibraryNames.map { libraryName in
+      (libraryName.lowercased(), libraryName)
+    }
+  )
 
-      for libraryName in suspiciousDynamicLibraryNames
-      where imageName.localizedCaseInsensitiveContains(libraryName) {
+  private static func checkLoadedDynamicLibraries(environment: Environment) throws {
+    for imageName in environment.loadedImageNames() {
+      if let libraryName = suspiciousDynamicLibraryName(in: imageName) {
         throw JailbreakDetectionError.suspiciousDynamicLibrary(name: libraryName)
       }
     }
+  }
+
+  private static func suspiciousDynamicLibraryName(in imageName: String) -> String? {
+    let lastPathComponent = URL(fileURLWithPath: imageName).lastPathComponent.lowercased()
+    return suspiciousDynamicLibraryNameLookup[lastPathComponent]
+  }
+
+  private static func loadedDynamicLibraryImageNames() -> [String] {
+    #if canImport(MachO)
+    var imageNames: [String] = []
+
+    for index in 0..<_dyld_image_count() {
+      guard let cString = _dyld_get_image_name(index) else {
+        continue
+      }
+
+      imageNames.append(String(cString: cString))
+    }
+
+    return imageNames
+    #else
+    return []
     #endif
   }
 }
