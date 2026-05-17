@@ -30,7 +30,7 @@ let detector = JailbreakDetector()
 
 do {
   try detector.detect()
-} catch let error as JailbreakDetectingError {
+} catch let error as JailbreakDetectionError {
   print("Jailbreak detected: \(error.code), \(error.message)")
 } catch {
   print("Jailbreak detection failed: \(error)")

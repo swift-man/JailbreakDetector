@@ -16,11 +16,11 @@ final class JailbreakDetectorTests: XCTestCase {
     XCTAssertTrue(JailbreakCheckOptions.all.contains(.dyldScan))
   }
 
-  func testJailbreakDetectingErrorDescriptionUsesMessage() {
-    let error = JailbreakDetectingError(code: "01", message: "detected")
+  func testJailbreakDetectionErrorDescriptionUsesMessage() {
+    let error = JailbreakDetectionError.suspiciousApplication(path: "/Applications/Cydia.app")
 
     XCTAssertEqual(error.code, "01")
-    XCTAssertEqual(error.message, "detected")
-    XCTAssertEqual(error.errorDescription, "detected")
+    XCTAssertEqual(error.message, "Suspicious application path exists: /Applications/Cydia.app")
+    XCTAssertEqual(error.errorDescription, "Suspicious application path exists: /Applications/Cydia.app")
   }
 }

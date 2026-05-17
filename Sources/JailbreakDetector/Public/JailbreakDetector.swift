@@ -7,8 +7,6 @@
 //
 
 public struct JailbreakDetector: JailbreakDetecting, Sendable {
-  public static let live = Self()
-
   public init() {}
 
   public func detect(options: JailbreakCheckOptions = .default) throws {
