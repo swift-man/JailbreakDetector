@@ -8,6 +8,16 @@ Use JailbreakDetector to run a small set of jailbreak checks before enabling sec
 
 The detector skips checks when running in the simulator. On device, the default configuration checks suspicious application paths, suspicious system paths, sandbox write behavior, and loaded dynamic libraries.
 
+## Installation
+
+Add JailbreakDetector as a Swift Package dependency:
+
+```swift
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.0"))
+```
+
+JailbreakDetector supports iOS 15.0 and later.
+
 ## Usage
 
 Create a detector and call ``JailbreakDetector/detect(options:)``.
@@ -35,6 +45,10 @@ try detector.detect(options: [.filePathChecks, .sandboxWrite, .dyldScan])
 ```
 
 Use ``JailbreakCheckOptions/all`` only when the app should also run the more aggressive system write probe.
+
+## Version
+
+The current release is 0.5.0.
 
 ## Topics
 

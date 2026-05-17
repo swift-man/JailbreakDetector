@@ -15,10 +15,19 @@ Add this package in Xcode:
 https://github.com/swift-man/JailbreakDetector
 ```
 
-Or add it to `Package.swift` before the first version tag:
+Or add it to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", branch: "main")
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.0"))
+```
+
+Then add `JailbreakDetector` to your target dependencies:
+
+```swift
+.target(
+  name: "YourApp",
+  dependencies: ["JailbreakDetector"]
+)
 ```
 
 ## Usage
@@ -42,3 +51,15 @@ To customize checks:
 ```swift
 try detector.detect(options: [.filePathChecks, .sandboxWrite, .dyldScan])
 ```
+
+Use `.all` only when your app should also run the more aggressive system write probe:
+
+```swift
+try detector.detect(options: .all)
+```
+
+## Release
+
+Current release: `0.5.0`
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
