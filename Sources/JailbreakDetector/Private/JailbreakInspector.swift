@@ -273,6 +273,7 @@ enum JailbreakInspector {
   private static func loadedDynamicLibraryImageNames() -> [String] {
     #if canImport(MachO)
     var imageNames: [String] = []
+    imageNames.reserveCapacity(Int(_dyld_image_count()))
 
     for index in 0..<_dyld_image_count() {
       guard let cString = _dyld_get_image_name(index) else {
