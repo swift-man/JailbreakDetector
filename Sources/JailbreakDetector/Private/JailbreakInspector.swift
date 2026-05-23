@@ -205,7 +205,6 @@ enum JailbreakInspector {
   ]
 
   private static let jailbreakFilePaths: [String] = [
-    "/bin/sh",
     "/etc/ssh/sshd_config",
     "/usr/bin/cycript",
     "/usr/lib/libcycript.dylib",
@@ -252,9 +251,10 @@ enum JailbreakInspector {
   ]
 
   private static let suspiciousDynamicLibraryNameLookup: [String: String] = Dictionary(
-    uniqueKeysWithValues: suspiciousDynamicLibraryNames.map { libraryName in
+    suspiciousDynamicLibraryNames.map { libraryName in
       (libraryName.lowercased(), libraryName)
-    }
+    },
+    uniquingKeysWith: { first, _ in first }
   )
 
   private static func checkLoadedDynamicLibraries(environment: Environment) throws {

@@ -46,6 +46,8 @@ try detector.detect(options: [.filePathChecks, .sandboxWrite, .dyldScan, .enviro
 
 Use ``JailbreakCheckOptions/all`` only when the app should also run the more aggressive system write probe.
 
+The ``JailbreakCheckOptions/sandboxWrite`` and ``JailbreakCheckOptions/systemWrite`` checks intentionally attempt writes outside the app sandbox. Failed writes are expected on non-jailbroken devices, but they can create diagnostic or crash-reporting noise in some production telemetry. If that is a problem for your app, pass a custom option set that omits those checks.
+
 JailbreakDetector intentionally avoids URL scheme checks such as `cydia://`, `sileo://`, `zebra://`, and `filza://` in its default flow because those schemes can be registered without proving that the device is jailbroken.
 
 ## Version

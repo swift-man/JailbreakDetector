@@ -93,6 +93,17 @@ func filePathChecksDetectAdditionalJailbreakToolPath() {
 }
 
 @Test
+func filePathChecksIgnoreGenericSystemShellPath() {
+  let environment = makeEnvironment(fileExists: { path in
+    path == "/bin/sh"
+  })
+
+  #expect(runsSuccessfully {
+    try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
+  })
+}
+
+@Test
 func filePathChecksDetectRootlessJailbreakSymbolicLink() {
   let environment = makeEnvironment(symbolicLinkDestination: { path in
     path == "/var/jb" ? "/private/preboot/example/procursus" : nil
