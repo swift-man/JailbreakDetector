@@ -15,6 +15,7 @@ public enum JailbreakDetectionError: Error, Equatable, LocalizedError, Sendable 
   case suspiciousFile(path: String)
   case suspiciousDynamicLibrary(name: String)
   case suspiciousEnvironmentVariable(name: String)
+  case suspiciousSymbolicLink(path: String)
 
   public var code: String {
     switch self {
@@ -30,6 +31,8 @@ public enum JailbreakDetectionError: Error, Equatable, LocalizedError, Sendable 
       return "06"
     case .suspiciousEnvironmentVariable:
       return "07"
+    case .suspiciousSymbolicLink:
+      return "08"
     }
   }
 
@@ -47,6 +50,8 @@ public enum JailbreakDetectionError: Error, Equatable, LocalizedError, Sendable 
       return "Suspicious dynamic library loaded: \(name)"
     case .suspiciousEnvironmentVariable(let name):
       return "Suspicious environment variable exists: \(name)"
+    case .suspiciousSymbolicLink(let path):
+      return "Suspicious symbolic link exists: \(path)"
     }
   }
 

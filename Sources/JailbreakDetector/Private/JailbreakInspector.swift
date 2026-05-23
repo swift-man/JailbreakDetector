@@ -45,9 +45,9 @@ enum JailbreakInspector {
   static func detect(options: JailbreakCheckOptions, environment: Environment = .live) throws {
     if options.contains(.filePathChecks) {
       try checkSuspiciousAppPaths(environment: environment)
+      try checkSuspiciousSymbolicLinks(environment: environment)
       try checkSuspiciousSystemPaths(environment: environment)
       try checkJailbreakFilePaths(environment: environment)
-      try checkSuspiciousSymbolicLinks(environment: environment)
     }
 
     if options.contains(.sandboxWrite) {
@@ -95,7 +95,7 @@ enum JailbreakInspector {
   private static func checkSuspiciousSymbolicLinks(environment: Environment) throws {
     for path in suspiciousSymbolicLinkPaths {
       if environment.symbolicLinkDestination(path) != nil {
-        throw JailbreakDetectionError.suspiciousSystemPath(path: path)
+        throw JailbreakDetectionError.suspiciousSymbolicLink(path: path)
       }
     }
   }

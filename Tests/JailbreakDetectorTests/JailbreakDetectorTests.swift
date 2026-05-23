@@ -79,6 +79,15 @@ func jailbreakDetectionErrorDescribesEnvironmentVariable() {
 }
 
 @Test
+func jailbreakDetectionErrorDescribesSymbolicLink() {
+  let error = JailbreakDetectionError.suspiciousSymbolicLink(path: "/var/jb")
+
+  #expect(error.code == "08")
+  #expect(error.message == "Suspicious symbolic link exists: /var/jb")
+  #expect(error.errorDescription == "Suspicious symbolic link exists: /var/jb")
+}
+
+@Test
 func filePathChecksDetectSuspiciousApplicationPath() {
   let environment = makeEnvironment(fileExists: { path in
     path == "/Applications/Cydia.app"
@@ -151,7 +160,25 @@ func filePathChecksDetectRootlessJailbreakSymbolicLink() {
     try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
   }
 
-  #expect(error == .suspiciousSystemPath(path: "/var/jb"))
+  #expect(error == .suspiciousSymbolicLink(path: "/var/jb"))
+}
+
+@Test
+func filePathChecksPreferSymbolicLinkErrorWhenRootlessPathExists() {
+  let environment = makeEnvironment(
+    fileExists: { path in
+      path == "/var/jb"
+    },
+    symbolicLinkDestination: { path in
+      path == "/var/jb" ? "/private/preboot/example/procursus" : nil
+    }
+  )
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
+  }
+
+  #expect(error == .suspiciousSymbolicLink(path: "/var/jb"))
 }
 
 @Test

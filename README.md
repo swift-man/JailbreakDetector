@@ -62,6 +62,8 @@ The `.sandboxWrite` and `.systemWrite` checks intentionally attempt writes outsi
 
 JailbreakDetector does not use URL scheme checks such as `cydia://`, `sileo://`, `zebra://`, or `filza://` in the default detection flow because those schemes can produce false positives.
 
+Rootless `/var/jb` symbolic link findings are reported as `suspiciousSymbolicLink` with error code `08`, so telemetry can distinguish symlink-based signals from regular suspicious system paths.
+
 ## Release
 
 Current release: `0.5.0`

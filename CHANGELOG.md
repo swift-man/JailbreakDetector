@@ -9,6 +9,7 @@ All notable changes to JailbreakDetector are documented here.
 - Added suspicious `DYLD_*` environment variable checks to the default detection flow.
 - Added additional low false-positive jailbreak tool paths for SSH, Cycript, Cydia internals, APT, and PreferenceLoader.
 - Added `/var/jb` symbolic link detection for rootless jailbreak layouts.
+- Added `suspiciousSymbolicLink` error reporting for rootless symbolic link signals.
 
 ### Notes
 
