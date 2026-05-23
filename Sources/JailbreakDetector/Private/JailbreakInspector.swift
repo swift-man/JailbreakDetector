@@ -280,7 +280,9 @@ enum JailbreakInspector {
         continue
       }
 
-      imageNames.append(String(cString: cString))
+      if let imageName = String(validatingUTF8: cString) {
+        imageNames.append(imageName)
+      }
     }
 
     return imageNames
