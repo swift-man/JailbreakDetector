@@ -142,7 +142,6 @@ enum JailbreakInspector {
     "/Applications/Sileo.app",
     "/Applications/Zebra.app",
     "/Applications/TrollStore.app",
-    "/var/containers/Bundle/Application/TrollStore.app",
 
     // Checkra1n
     "/Applications/checkra1n.app",
@@ -272,10 +271,11 @@ enum JailbreakInspector {
 
   private static func loadedDynamicLibraryImageNames() -> [String] {
     #if canImport(MachO)
+    let imageCount = _dyld_image_count()
     var imageNames: [String] = []
-    imageNames.reserveCapacity(Int(_dyld_image_count()))
+    imageNames.reserveCapacity(Int(imageCount))
 
-    for index in 0..<_dyld_image_count() {
+    for index in 0..<imageCount {
       guard let cString = _dyld_get_image_name(index) else {
         continue
       }
