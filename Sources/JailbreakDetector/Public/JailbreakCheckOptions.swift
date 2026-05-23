@@ -22,16 +22,21 @@ public struct JailbreakCheckOptions: OptionSet, Sendable {
   // Loaded dylib scan.
   public static let dyldScan         = JailbreakCheckOptions(rawValue: 1 << 3)
 
+  // Suspicious runtime environment variables.
+  public static let environmentVariableChecks = JailbreakCheckOptions(rawValue: 1 << 4)
+
   public static let `default`: JailbreakCheckOptions = [
     .filePathChecks,
     .sandboxWrite,
-    .dyldScan
+    .dyldScan,
+    .environmentVariableChecks
   ]
 
   public static let all: JailbreakCheckOptions = [
     .filePathChecks,
     .sandboxWrite,
     .systemWrite,
-    .dyldScan
+    .dyldScan,
+    .environmentVariableChecks
   ]
 }

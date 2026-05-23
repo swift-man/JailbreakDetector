@@ -14,6 +14,7 @@ public enum JailbreakDetectionError: Error, Equatable, LocalizedError, Sendable 
   case sandboxWriteSucceeded(path: String)
   case suspiciousFile(path: String)
   case suspiciousDynamicLibrary(name: String)
+  case suspiciousEnvironmentVariable(name: String)
 
   public var code: String {
     switch self {
@@ -27,6 +28,8 @@ public enum JailbreakDetectionError: Error, Equatable, LocalizedError, Sendable 
       return "05"
     case .suspiciousDynamicLibrary:
       return "06"
+    case .suspiciousEnvironmentVariable:
+      return "07"
     }
   }
 
@@ -42,6 +45,8 @@ public enum JailbreakDetectionError: Error, Equatable, LocalizedError, Sendable 
       return "Sandbox write check succeeded: \(path)"
     case .suspiciousDynamicLibrary(let name):
       return "Suspicious dynamic library loaded: \(name)"
+    case .suspiciousEnvironmentVariable(let name):
+      return "Suspicious environment variable exists: \(name)"
     }
   }
 

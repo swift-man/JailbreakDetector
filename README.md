@@ -49,7 +49,7 @@ do {
 To customize checks:
 
 ```swift
-try detector.detect(options: [.filePathChecks, .sandboxWrite, .dyldScan])
+try detector.detect(options: [.filePathChecks, .sandboxWrite, .dyldScan, .environmentVariableChecks])
 ```
 
 Use `.all` only when your app should also run the more aggressive system write probe:
@@ -57,6 +57,8 @@ Use `.all` only when your app should also run the more aggressive system write p
 ```swift
 try detector.detect(options: .all)
 ```
+
+JailbreakDetector does not use URL scheme checks such as `cydia://`, `sileo://`, `zebra://`, or `filza://` in the default detection flow because those schemes can produce false positives.
 
 ## Release
 

@@ -2,6 +2,18 @@
 
 All notable changes to JailbreakDetector are documented here.
 
+## Unreleased
+
+### Added
+
+- Added suspicious `DYLD_*` environment variable checks to the default detection flow.
+- Added additional low false-positive jailbreak tool paths for SSH, Cycript, Cydia internals, APT, and PreferenceLoader.
+- Added `/var/jb` symbolic link detection for rootless jailbreak layouts.
+
+### Notes
+
+- URL scheme checks such as `cydia://`, `sileo://`, `zebra://`, and `filza://` remain excluded because they can produce false positives.
+
 ## 0.5.0 - 2026-05-17
 
 Initial Swift Package release.
