@@ -12,13 +12,13 @@ import MachO
 import Foundation
 
 enum JailbreakInspector {
-  struct Environment {
-    let fileExists: (String) -> Bool
-    let symbolicLinkDestination: (String) -> String?
-    let environmentVariables: () -> [String: String]
-    let writeString: (String, URL) throws -> Void
-    let removeItem: (URL) throws -> Void
-    let loadedImageNames: () -> [String]
+  struct Environment: Sendable {
+    let fileExists: @Sendable (String) -> Bool
+    let symbolicLinkDestination: @Sendable (String) -> String?
+    let environmentVariables: @Sendable () -> [String: String]
+    let writeString: @Sendable (String, URL) throws -> Void
+    let removeItem: @Sendable (URL) throws -> Void
+    let loadedImageNames: @Sendable () -> [String]
 
     static let live = Environment(
       fileExists: { path in

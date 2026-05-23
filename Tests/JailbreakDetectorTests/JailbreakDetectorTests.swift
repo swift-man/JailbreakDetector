@@ -4,6 +4,44 @@ import Testing
 
 private struct TestWriteError: Error {}
 
+private final class SandboxWriteRecorder: @unchecked Sendable {
+  private let lock = NSLock()
+  private var _writtenString: String?
+  private var _writtenPath: String?
+  private var _removedPath: String?
+
+  var writtenString: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _writtenString
+  }
+
+  var writtenPath: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _writtenPath
+  }
+
+  var removedPath: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _removedPath
+  }
+
+  func recordWrite(_ string: String, url: URL) {
+    lock.lock()
+    defer { lock.unlock() }
+    _writtenString = string
+    _writtenPath = url.path
+  }
+
+  func recordRemoval(url: URL) {
+    lock.lock()
+    defer { lock.unlock() }
+    _removedPath = url.path
+  }
+}
+
 @Test
 func defaultOptionsIncludeExpectedChecks() {
   #expect(JailbreakCheckOptions.default.contains(.filePathChecks))
@@ -118,16 +156,13 @@ func filePathChecksDetectRootlessJailbreakSymbolicLink() {
 
 @Test
 func sandboxWriteThrowsWhenWriteSucceeds() {
-  var writtenString: String?
-  var writtenPath: String?
-  var removedPath: String?
+  let recorder = SandboxWriteRecorder()
   let environment = makeEnvironment(
     writeString: { string, url in
-      writtenString = string
-      writtenPath = url.path
+      recorder.recordWrite(string, url: url)
     },
     removeItem: { url in
-      removedPath = url.path
+      recorder.recordRemoval(url: url)
     }
   )
 
@@ -141,27 +176,27 @@ func sandboxWriteThrowsWhenWriteSucceeds() {
   }
 
   #expect(path.hasPrefix("/private/"))
-  #expect(writtenString == "jailbreak")
-  #expect(writtenPath == path)
-  #expect(removedPath == path)
+  #expect(recorder.writtenString == "jailbreak")
+  #expect(recorder.writtenPath == path)
+  #expect(recorder.removedPath == path)
 }
 
 @Test
 func sandboxWritePassesWhenWriteFails() {
-  var didRemove = false
+  let recorder = SandboxWriteRecorder()
   let environment = makeEnvironment(
     writeString: { _, _ in
       throw TestWriteError()
     },
-    removeItem: { _ in
-      didRemove = true
+    removeItem: { url in
+      recorder.recordRemoval(url: url)
     }
   )
 
   #expect(runsSuccessfully {
     try JailbreakInspector.detect(options: .sandboxWrite, environment: environment)
   })
-  #expect(!didRemove)
+  #expect(recorder.removedPath == nil)
 }
 
 @Test
@@ -216,12 +251,12 @@ func environmentVariableChecksPassWithoutSuspiciousVariables() {
 }
 
 private func makeEnvironment(
-  fileExists: @escaping (String) -> Bool = { _ in false },
-  symbolicLinkDestination: @escaping (String) -> String? = { _ in nil },
-  environmentVariables: @escaping () -> [String: String] = { [:] },
-  writeString: @escaping (String, URL) throws -> Void = { _, _ in throw TestWriteError() },
-  removeItem: @escaping (URL) throws -> Void = { _ in },
-  loadedImageNames: @escaping () -> [String] = { [] }
+  fileExists: @escaping @Sendable (String) -> Bool = { _ in false },
+  symbolicLinkDestination: @escaping @Sendable (String) -> String? = { _ in nil },
+  environmentVariables: @escaping @Sendable () -> [String: String] = { [:] },
+  writeString: @escaping @Sendable (String, URL) throws -> Void = { _, _ in throw TestWriteError() },
+  removeItem: @escaping @Sendable (URL) throws -> Void = { _ in },
+  loadedImageNames: @escaping @Sendable () -> [String] = { [] }
 ) -> JailbreakInspector.Environment {
   JailbreakInspector.Environment(
     fileExists: fileExists,
