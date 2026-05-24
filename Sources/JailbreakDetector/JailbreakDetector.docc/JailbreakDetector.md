@@ -13,7 +13,7 @@ The detector skips checks when running in the simulator. On device, the default 
 Add JailbreakDetector as a Swift Package dependency:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.0"))
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.1"))
 ```
 
 JailbreakDetector supports iOS 15.0 and later.
@@ -54,7 +54,7 @@ Rootless `/var/jb` symbolic link findings are reported as ``JailbreakDetectionEr
 
 ## Version
 
-The current release is 0.5.0.
+The current release is 0.5.1.
 
 ## Topics
 

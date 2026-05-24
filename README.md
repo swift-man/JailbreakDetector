@@ -18,7 +18,7 @@ https://github.com/swift-man/JailbreakDetector
 Or add it to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.0"))
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.1"))
 ```
 
 Then add `JailbreakDetector` to your target dependencies:
@@ -66,6 +66,6 @@ Rootless `/var/jb` symbolic link findings are reported as `suspiciousSymbolicLin
 
 ## Release
 
-Current release: `0.5.0`
+Current release: `0.5.1`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
