@@ -1,3 +1,8 @@
+![Badge - Swift](https://img.shields.io/badge/Swift-5.9-F05138.svg?style=flat-square&logo=Swift&logoColor=white)
+![Badge - Version](https://img.shields.io/badge/Version-0.5.1-1177AA?style=flat-square)
+![Badge - Swift Package Manager](https://img.shields.io/badge/SPM-compatible-orange?style=flat-square)
+![Badge - Platform](https://img.shields.io/badge/iOS-v15.0-yellow?style=flat-square)
+
 # JailbreakDetector
 
 A lightweight Swift Package for detecting common jailbreak indicators on iOS.
