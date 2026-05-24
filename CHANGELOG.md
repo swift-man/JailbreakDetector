@@ -16,6 +16,7 @@ All notable changes to JailbreakDetector are documented here.
 - Generic system shell paths such as `/bin/sh` remain excluded from the added path checks to keep false positives low.
 - Sandbox write checks can create diagnostic or crash-reporting noise, so apps with strict telemetry should pass custom options if needed.
 - URL scheme checks such as `cydia://`, `sileo://`, `zebra://`, and `filza://` remain excluded because they can produce false positives.
+- `JailbreakDetectionError.suspiciousSymbolicLink(path:)` is a public API addition. Release this change as a minor or higher version because clients with exhaustive `JailbreakDetectionError` switches may need to handle the new case.
 
 ## 0.5.0 - 2026-05-17
 
