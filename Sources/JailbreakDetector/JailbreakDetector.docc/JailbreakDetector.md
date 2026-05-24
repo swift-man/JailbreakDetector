@@ -6,7 +6,7 @@ A lightweight Swift package for detecting common jailbreak indicators on iOS.
 
 Use JailbreakDetector to run a small set of jailbreak checks before enabling security-sensitive app flows.
 
-The detector skips checks when running in the simulator. On device, the default configuration checks suspicious application paths, suspicious system paths, sandbox write behavior, and loaded dynamic libraries.
+The detector skips checks when running in the simulator. On device, the default configuration checks suspicious application paths, suspicious system paths, sandbox write behavior, loaded dynamic libraries, and suspicious runtime environment variables.
 
 ## Installation
 
@@ -41,10 +41,16 @@ do {
 Pass ``JailbreakCheckOptions`` to choose which checks should run.
 
 ```swift
-try detector.detect(options: [.filePathChecks, .sandboxWrite, .dyldScan])
+try detector.detect(options: [.filePathChecks, .sandboxWrite, .dyldScan, .environmentVariableChecks])
 ```
 
 Use ``JailbreakCheckOptions/all`` only when the app should also run the more aggressive system write probe.
+
+The ``JailbreakCheckOptions/sandboxWrite`` and ``JailbreakCheckOptions/systemWrite`` checks intentionally attempt writes outside the app sandbox. Failed writes are expected on non-jailbroken devices, but they can create diagnostic or crash-reporting noise in some production telemetry. If that is a problem for your app, pass a custom option set that omits those checks.
+
+JailbreakDetector intentionally avoids URL scheme checks such as `cydia://`, `sileo://`, `zebra://`, and `filza://` in its default flow because those schemes can be registered without proving that the device is jailbroken.
+
+Rootless `/var/jb` symbolic link findings are reported as ``JailbreakDetectionError/suspiciousSymbolicLink(path:)`` with error code `08`, so telemetry can distinguish symlink-based signals from regular suspicious system paths.
 
 ## Version
 

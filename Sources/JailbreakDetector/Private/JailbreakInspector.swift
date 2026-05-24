@@ -12,15 +12,23 @@ import MachO
 import Foundation
 
 enum JailbreakInspector {
-  struct Environment {
-    let fileExists: (String) -> Bool
-    let writeString: (String, URL) throws -> Void
-    let removeItem: (URL) throws -> Void
-    let loadedImageNames: () -> [String]
+  struct Environment: Sendable {
+    let fileExists: @Sendable (String) -> Bool
+    let symbolicLinkDestination: @Sendable (String) -> String?
+    let environmentVariables: @Sendable () -> [String: String]
+    let writeString: @Sendable (String, URL) throws -> Void
+    let removeItem: @Sendable (URL) throws -> Void
+    let loadedImageNames: @Sendable () -> [String]
 
     static let live = Environment(
       fileExists: { path in
         FileManager.default.fileExists(atPath: path)
+      },
+      symbolicLinkDestination: { path in
+        try? FileManager.default.destinationOfSymbolicLink(atPath: path)
+      },
+      environmentVariables: {
+        ProcessInfo.processInfo.environment
       },
       writeString: { string, url in
         try string.write(to: url, atomically: true, encoding: .utf8)
@@ -37,6 +45,7 @@ enum JailbreakInspector {
   static func detect(options: JailbreakCheckOptions, environment: Environment = .live) throws {
     if options.contains(.filePathChecks) {
       try checkSuspiciousAppPaths(environment: environment)
+      try checkSuspiciousSymbolicLinks(environment: environment)
       try checkSuspiciousSystemPaths(environment: environment)
       try checkJailbreakFilePaths(environment: environment)
     }
@@ -51,6 +60,10 @@ enum JailbreakInspector {
 
     if options.contains(.dyldScan) {
       try checkLoadedDynamicLibraries(environment: environment)
+    }
+
+    if options.contains(.environmentVariableChecks) {
+      try checkSuspiciousEnvironmentVariables(environment: environment)
     }
   }
 
@@ -79,6 +92,14 @@ enum JailbreakInspector {
     }
   }
 
+  private static func checkSuspiciousSymbolicLinks(environment: Environment) throws {
+    for path in suspiciousSymbolicLinkPaths {
+      if environment.symbolicLinkDestination(path) != nil {
+        throw JailbreakDetectionError.suspiciousSymbolicLink(path: path)
+      }
+    }
+  }
+
   private static func sandboxWriteTest(path: String, environment: Environment) throws {
     let url = URL(fileURLWithPath: path)
 
@@ -88,8 +109,18 @@ enum JailbreakInspector {
       return
     }
 
-    try? environment.removeItem(url)
+    defer { try? environment.removeItem(url) }
     throw JailbreakDetectionError.sandboxWriteSucceeded(path: path)
+  }
+
+  private static func checkSuspiciousEnvironmentVariables(environment: Environment) throws {
+    let environmentVariables = environment.environmentVariables()
+
+    for variableName in suspiciousEnvironmentVariableNames {
+      if environmentVariables[variableName] != nil {
+        throw JailbreakDetectionError.suspiciousEnvironmentVariable(name: variableName)
+      }
+    }
   }
 
   // MARK: - Datasets
@@ -111,7 +142,6 @@ enum JailbreakInspector {
     "/Applications/Sileo.app",
     "/Applications/Zebra.app",
     "/Applications/TrollStore.app",
-    "/var/containers/Bundle/Application/TrollStore.app",
 
     // Checkra1n
     "/Applications/checkra1n.app",
@@ -133,8 +163,13 @@ enum JailbreakInspector {
     "/private/var/tmp/cydia.log",
     "/System/Library/LaunchDaemons/com.ikey.bbot.plist",
     "/System/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist",
+    "/private/etc/apt",
+    "/private/var/root/Library/PreferenceLoader/Preferences",
     "/usr/bin/sshd",
+    "/usr/bin/ssh",
+    "/usr/libexec/cydia",
     "/usr/libexec/sftp-server",
+    "/usr/libexec/ssh-keysign",
     "/usr/sbin/sshd",
     "/etc/apt",
     "/bin/bash",
@@ -160,6 +195,8 @@ enum JailbreakInspector {
     // TrollStore
     "/var/containers/Bundle/Application/trollstorehelper",
     "/var/containers/Bundle/trollstore",
+    "/var/lib/apt",
+    "/var/lib/cydia",
 
     // Bootstrap files
     "/var/jb/preboot",
@@ -167,8 +204,10 @@ enum JailbreakInspector {
   ]
 
   private static let jailbreakFilePaths: [String] = [
-    "/bin/sh",
     "/etc/ssh/sshd_config",
+    "/usr/bin/cycript",
+    "/usr/lib/libcycript.dylib",
+    "/usr/local/bin/cycript",
     "/usr/sbin/frida-server",
     "/var/cache/apt",
     "/var/jb/bin/bash",
@@ -200,10 +239,21 @@ enum JailbreakInspector {
     "tweaksupport.dylib"
   ]
 
+  private static let suspiciousSymbolicLinkPaths: [String] = [
+    "/var/jb"
+  ]
+
+  private static let suspiciousEnvironmentVariableNames: [String] = [
+    "DYLD_INSERT_LIBRARIES",
+    "DYLD_FRAMEWORK_PATH",
+    "DYLD_LIBRARY_PATH"
+  ]
+
   private static let suspiciousDynamicLibraryNameLookup: [String: String] = Dictionary(
-    uniqueKeysWithValues: suspiciousDynamicLibraryNames.map { libraryName in
+    suspiciousDynamicLibraryNames.map { libraryName in
       (libraryName.lowercased(), libraryName)
-    }
+    },
+    uniquingKeysWith: { first, _ in first }
   )
 
   private static func checkLoadedDynamicLibraries(environment: Environment) throws {
@@ -221,14 +271,18 @@ enum JailbreakInspector {
 
   private static func loadedDynamicLibraryImageNames() -> [String] {
     #if canImport(MachO)
+    let imageCount = _dyld_image_count()
     var imageNames: [String] = []
+    imageNames.reserveCapacity(Int(imageCount))
 
-    for index in 0..<_dyld_image_count() {
+    for index in 0..<imageCount {
       guard let cString = _dyld_get_image_name(index) else {
         continue
       }
 
-      imageNames.append(String(cString: cString))
+      if let imageName = String(validatingUTF8: cString) {
+        imageNames.append(imageName)
+      }
     }
 
     return imageNames

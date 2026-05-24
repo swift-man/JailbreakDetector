@@ -4,11 +4,50 @@ import Testing
 
 private struct TestWriteError: Error {}
 
+private final class SandboxWriteRecorder: @unchecked Sendable {
+  private let lock = NSLock()
+  private var _writtenString: String?
+  private var _writtenPath: String?
+  private var _removedPath: String?
+
+  var writtenString: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _writtenString
+  }
+
+  var writtenPath: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _writtenPath
+  }
+
+  var removedPath: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _removedPath
+  }
+
+  func recordWrite(_ string: String, url: URL) {
+    lock.lock()
+    defer { lock.unlock() }
+    _writtenString = string
+    _writtenPath = url.path
+  }
+
+  func recordRemoval(url: URL) {
+    lock.lock()
+    defer { lock.unlock() }
+    _removedPath = url.path
+  }
+}
+
 @Test
 func defaultOptionsIncludeExpectedChecks() {
   #expect(JailbreakCheckOptions.default.contains(.filePathChecks))
   #expect(JailbreakCheckOptions.default.contains(.sandboxWrite))
   #expect(JailbreakCheckOptions.default.contains(.dyldScan))
+  #expect(JailbreakCheckOptions.default.contains(.environmentVariableChecks))
   #expect(!JailbreakCheckOptions.default.contains(.systemWrite))
 }
 
@@ -18,6 +57,7 @@ func allOptionsIncludeSystemWrite() {
   #expect(JailbreakCheckOptions.all.contains(.sandboxWrite))
   #expect(JailbreakCheckOptions.all.contains(.systemWrite))
   #expect(JailbreakCheckOptions.all.contains(.dyldScan))
+  #expect(JailbreakCheckOptions.all.contains(.environmentVariableChecks))
 }
 
 @Test
@@ -27,6 +67,24 @@ func jailbreakDetectionErrorDescriptionUsesMessage() {
   #expect(error.code == "01")
   #expect(error.message == "Suspicious application path exists: /Applications/Cydia.app")
   #expect(error.errorDescription == "Suspicious application path exists: /Applications/Cydia.app")
+}
+
+@Test
+func jailbreakDetectionErrorDescribesEnvironmentVariable() {
+  let error = JailbreakDetectionError.suspiciousEnvironmentVariable(name: "DYLD_INSERT_LIBRARIES")
+
+  #expect(error.code == "07")
+  #expect(error.message == "Suspicious environment variable exists: DYLD_INSERT_LIBRARIES")
+  #expect(error.errorDescription == "Suspicious environment variable exists: DYLD_INSERT_LIBRARIES")
+}
+
+@Test
+func jailbreakDetectionErrorDescribesSymbolicLink() {
+  let error = JailbreakDetectionError.suspiciousSymbolicLink(path: "/var/jb")
+
+  #expect(error.code == "08")
+  #expect(error.message == "Suspicious symbolic link exists: /var/jb")
+  #expect(error.errorDescription == "Suspicious symbolic link exists: /var/jb")
 }
 
 @Test
@@ -69,17 +127,69 @@ func filePathChecksDetectJailbreakFilePath() {
 }
 
 @Test
+func filePathChecksDetectAdditionalJailbreakToolPath() {
+  let environment = makeEnvironment(fileExists: { path in
+    path == "/usr/bin/cycript"
+  })
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
+  }
+
+  #expect(error == .suspiciousFile(path: "/usr/bin/cycript"))
+}
+
+@Test
+func filePathChecksIgnoreGenericSystemShellPath() {
+  let environment = makeEnvironment(fileExists: { path in
+    path == "/bin/sh"
+  })
+
+  #expect(runsSuccessfully {
+    try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
+  })
+}
+
+@Test
+func filePathChecksDetectRootlessJailbreakSymbolicLink() {
+  let environment = makeEnvironment(symbolicLinkDestination: { path in
+    path == "/var/jb" ? "/private/preboot/example/procursus" : nil
+  })
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
+  }
+
+  #expect(error == .suspiciousSymbolicLink(path: "/var/jb"))
+}
+
+@Test
+func filePathChecksPreferSymbolicLinkErrorWhenRootlessPathExists() {
+  let environment = makeEnvironment(
+    fileExists: { path in
+      path == "/var/jb"
+    },
+    symbolicLinkDestination: { path in
+      path == "/var/jb" ? "/private/preboot/example/procursus" : nil
+    }
+  )
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
+  }
+
+  #expect(error == .suspiciousSymbolicLink(path: "/var/jb"))
+}
+
+@Test
 func sandboxWriteThrowsWhenWriteSucceeds() {
-  var writtenString: String?
-  var writtenPath: String?
-  var removedPath: String?
+  let recorder = SandboxWriteRecorder()
   let environment = makeEnvironment(
     writeString: { string, url in
-      writtenString = string
-      writtenPath = url.path
+      recorder.recordWrite(string, url: url)
     },
     removeItem: { url in
-      removedPath = url.path
+      recorder.recordRemoval(url: url)
     }
   )
 
@@ -93,27 +203,27 @@ func sandboxWriteThrowsWhenWriteSucceeds() {
   }
 
   #expect(path.hasPrefix("/private/"))
-  #expect(writtenString == "jailbreak")
-  #expect(writtenPath == path)
-  #expect(removedPath == path)
+  #expect(recorder.writtenString == "jailbreak")
+  #expect(recorder.writtenPath == path)
+  #expect(recorder.removedPath == path)
 }
 
 @Test
 func sandboxWritePassesWhenWriteFails() {
-  var didRemove = false
+  let recorder = SandboxWriteRecorder()
   let environment = makeEnvironment(
     writeString: { _, _ in
       throw TestWriteError()
     },
-    removeItem: { _ in
-      didRemove = true
+    removeItem: { url in
+      recorder.recordRemoval(url: url)
     }
   )
 
   #expect(runsSuccessfully {
     try JailbreakInspector.detect(options: .sandboxWrite, environment: environment)
   })
-  #expect(!didRemove)
+  #expect(recorder.removedPath == nil)
 }
 
 @Test
@@ -143,14 +253,42 @@ func dyldScanPassesWhenLoadedLibrariesAreClean() {
   })
 }
 
+@Test
+func environmentVariableChecksDetectDyldInjectionVariable() {
+  let environment = makeEnvironment(environmentVariables: {
+    ["DYLD_INSERT_LIBRARIES": "/usr/lib/FridaGadget.dylib"]
+  })
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .environmentVariableChecks, environment: environment)
+  }
+
+  #expect(error == .suspiciousEnvironmentVariable(name: "DYLD_INSERT_LIBRARIES"))
+}
+
+@Test
+func environmentVariableChecksPassWithoutSuspiciousVariables() {
+  let environment = makeEnvironment(environmentVariables: {
+    ["PATH": "/usr/bin"]
+  })
+
+  #expect(runsSuccessfully {
+    try JailbreakInspector.detect(options: .environmentVariableChecks, environment: environment)
+  })
+}
+
 private func makeEnvironment(
-  fileExists: @escaping (String) -> Bool = { _ in false },
-  writeString: @escaping (String, URL) throws -> Void = { _, _ in throw TestWriteError() },
-  removeItem: @escaping (URL) throws -> Void = { _ in },
-  loadedImageNames: @escaping () -> [String] = { [] }
+  fileExists: @escaping @Sendable (String) -> Bool = { _ in false },
+  symbolicLinkDestination: @escaping @Sendable (String) -> String? = { _ in nil },
+  environmentVariables: @escaping @Sendable () -> [String: String] = { [:] },
+  writeString: @escaping @Sendable (String, URL) throws -> Void = { _, _ in throw TestWriteError() },
+  removeItem: @escaping @Sendable (URL) throws -> Void = { _ in },
+  loadedImageNames: @escaping @Sendable () -> [String] = { [] }
 ) -> JailbreakInspector.Environment {
   JailbreakInspector.Environment(
     fileExists: fileExists,
+    symbolicLinkDestination: symbolicLinkDestination,
+    environmentVariables: environmentVariables,
     writeString: writeString,
     removeItem: removeItem,
     loadedImageNames: loadedImageNames
