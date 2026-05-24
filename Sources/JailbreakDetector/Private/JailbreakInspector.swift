@@ -109,7 +109,7 @@ enum JailbreakInspector {
       return
     }
 
-    try? environment.removeItem(url)
+    defer { try? environment.removeItem(url) }
     throw JailbreakDetectionError.sandboxWriteSucceeded(path: path)
   }
 
