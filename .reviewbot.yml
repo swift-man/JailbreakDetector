@@ -6,6 +6,7 @@ review:
     - "Package.swift"
     - "**/Info.plist"
     - "README.md"
+    - "**/*.docc/**/*.md"
 
   exclude:
     # dependency / build output

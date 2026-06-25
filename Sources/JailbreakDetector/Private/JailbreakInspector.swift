@@ -101,7 +101,7 @@ enum JailbreakInspector {
   }
 
   private static func sandboxWriteTest(path: String, environment: Environment) throws {
-    let url = URL(fileURLWithPath: path)
+    let url = URL(fileURLWithPath: path, isDirectory: false)
 
     do {
       try environment.writeString("jailbreak", url)
@@ -271,11 +271,17 @@ enum JailbreakInspector {
   }
 
   private static func lastPathComponent(in path: String) -> String {
-    guard let slashIndex = path.lastIndex(of: "/") else {
-      return path
+    var endIndex = path.endIndex
+    while endIndex > path.startIndex && path[path.index(before: endIndex)] == "/" {
+      endIndex = path.index(before: endIndex)
     }
 
-    return String(path[path.index(after: slashIndex)...])
+    let trimmedPath = path[..<endIndex]
+    guard let slashIndex = trimmedPath.lastIndex(of: "/") else {
+      return String(trimmedPath)
+    }
+
+    return String(trimmedPath[trimmedPath.index(after: slashIndex)...])
   }
 
   private static func loadedDynamicLibraryImageNames() -> [String] {

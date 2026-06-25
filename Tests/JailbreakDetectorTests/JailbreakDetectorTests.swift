@@ -266,6 +266,19 @@ func dyldScanDetectsSuspiciousLibraryByLastPathComponent() {
 }
 
 @Test
+func dyldScanDetectsSuspiciousLibraryWithTrailingSlash() {
+  let environment = makeEnvironment(loadedImageNames: {
+    ["/usr/lib/fridagadget.dylib/"]
+  })
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .dyldScan, environment: environment)
+  }
+
+  #expect(error == .suspiciousDynamicLibrary(name: "FridaGadget.dylib"))
+}
+
+@Test
 func dyldScanDetectsCydiaSubstrateDylib() {
   let environment = makeEnvironment(loadedImageNames: {
     ["/Library/MobileSubstrate/DynamicLibraries/CydiaSubstrate.dylib"]
