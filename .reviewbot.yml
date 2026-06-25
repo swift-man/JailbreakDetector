@@ -46,7 +46,6 @@ review:
     - "docs/**"
     - "JailbreakDetector.doccarchive/**"
     - "**/*.doccarchive/**"
-    - "**/*.docc/**"
 
   always_review:
     - ".reviewbot.yml"
