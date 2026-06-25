@@ -4,6 +4,12 @@ All notable changes to JailbreakDetector are documented here.
 
 ## Unreleased
 
+## 0.5.2 - 2026-06-26
+
+### Fixed
+
+- Skipped `DYLD_*` environment variable checks for debug and TestFlight sandbox receipt builds to avoid false positives from legitimate development and beta distribution tooling.
+
 ## 0.5.1 - 2026-05-24
 
 ### Added

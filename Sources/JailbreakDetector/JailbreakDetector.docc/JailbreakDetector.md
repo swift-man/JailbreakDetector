@@ -6,14 +6,14 @@ A lightweight Swift package for detecting common jailbreak indicators on iOS.
 
 Use JailbreakDetector to run a small set of jailbreak checks before enabling security-sensitive app flows.
 
-The detector skips checks when running in the simulator. On device, the default configuration checks suspicious application paths, suspicious system paths, sandbox write behavior, loaded dynamic libraries, and suspicious runtime environment variables.
+The detector skips checks when running in the simulator. On device, the default configuration checks suspicious application paths, suspicious system paths, sandbox write behavior, loaded dynamic libraries, and suspicious runtime environment variables. Environment variable checks are skipped for debug and TestFlight sandbox receipt builds to avoid flagging legitimate development and beta distribution tooling.
 
 ## Installation
 
 Add JailbreakDetector as a Swift Package dependency:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.1"))
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.2"))
 ```
 
 JailbreakDetector supports iOS 15.0 and later.
@@ -54,7 +54,7 @@ Rootless `/var/jb` symbolic link findings are reported as ``JailbreakDetectionEr
 
 ## Version
 
-The current release is 0.5.1.
+The current release is 0.5.2.
 
 ## Topics
 

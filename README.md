@@ -1,5 +1,5 @@
 ![Badge - Swift](https://img.shields.io/badge/Swift-5.9-F05138.svg?style=flat-square&logo=Swift&logoColor=white)
-![Badge - Version](https://img.shields.io/badge/Version-0.5.1-1177AA?style=flat-square)
+![Badge - Version](https://img.shields.io/badge/Version-0.5.2-1177AA?style=flat-square)
 ![Badge - Swift Package Manager](https://img.shields.io/badge/SPM-compatible-orange?style=flat-square)
 ![Badge - Platform](https://img.shields.io/badge/iOS-v15.0-yellow?style=flat-square)
 
@@ -23,7 +23,7 @@ https://github.com/swift-man/JailbreakDetector
 Or add it to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.1"))
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.2"))
 ```
 
 Then add `JailbreakDetector` to your target dependencies:
@@ -69,8 +69,10 @@ JailbreakDetector does not use URL scheme checks such as `cydia://`, `sileo://`,
 
 Rootless `/var/jb` symbolic link findings are reported as `suspiciousSymbolicLink` with error code `08`, so telemetry can distinguish symlink-based signals from regular suspicious system paths.
 
+`DYLD_*` environment variable checks are skipped for debug and TestFlight sandbox receipt builds to avoid flagging legitimate development and beta distribution tooling.
+
 ## Release
 
-Current release: `0.5.1`
+Current release: `0.5.2`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.

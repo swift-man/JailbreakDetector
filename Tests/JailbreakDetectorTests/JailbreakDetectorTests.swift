@@ -61,6 +61,39 @@ func allOptionsIncludeSystemWrite() {
 }
 
 @Test
+func detectorEffectiveOptionsExcludeEnvironmentVariablesForDebugBuilds() {
+  let options = JailbreakDetector.effectiveOptions(.default,
+                                                  isDebugBuild: true,
+                                                  isSandboxReceipt: false)
+
+  #expect(!options.contains(.environmentVariableChecks))
+  #expect(options.contains(.filePathChecks))
+  #expect(options.contains(.sandboxWrite))
+  #expect(options.contains(.dyldScan))
+}
+
+@Test
+func detectorEffectiveOptionsExcludeEnvironmentVariablesForSandboxReceipts() {
+  let options = JailbreakDetector.effectiveOptions(.default,
+                                                  isDebugBuild: false,
+                                                  isSandboxReceipt: true)
+
+  #expect(!options.contains(.environmentVariableChecks))
+  #expect(options.contains(.filePathChecks))
+  #expect(options.contains(.sandboxWrite))
+  #expect(options.contains(.dyldScan))
+}
+
+@Test
+func detectorEffectiveOptionsKeepEnvironmentVariablesForAppStoreBuilds() {
+  let options = JailbreakDetector.effectiveOptions(.default,
+                                                  isDebugBuild: false,
+                                                  isSandboxReceipt: false)
+
+  #expect(options.contains(.environmentVariableChecks))
+}
+
+@Test
 func jailbreakDetectionErrorDescriptionUsesMessage() {
   let error = JailbreakDetectionError.suspiciousApplication(path: "/Applications/Cydia.app")
 
