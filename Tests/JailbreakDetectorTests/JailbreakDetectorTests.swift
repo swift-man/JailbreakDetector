@@ -81,9 +81,9 @@ func detectorEffectiveOptionsKeepEnvironmentVariablesForReleaseBuilds() {
 
 @Test
 func detectorDetectAcceptsEmptyCustomOptions() {
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakDetector().detect(options: [])
-  })
+  }
 }
 
 @Test
@@ -171,9 +171,9 @@ func filePathChecksIgnoreGenericSystemShellPath() {
     path == "/bin/sh"
   })
 
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
-  })
+  }
 }
 
 @Test
@@ -246,9 +246,9 @@ func sandboxWritePassesWhenWriteFails() {
     }
   )
 
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakInspector.detect(options: .sandboxWrite, environment: environment)
-  })
+  }
   #expect(recorder.removedPath == nil)
 }
 
@@ -300,9 +300,9 @@ func dyldScanPassesWhenLoadedLibrariesAreClean() {
     ]
   })
 
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakInspector.detect(options: .dyldScan, environment: environment)
-  })
+  }
 }
 
 @Test
@@ -324,9 +324,9 @@ func environmentVariableChecksPassWithoutSuspiciousVariables() {
     ["PATH": "/usr/bin"]
   })
 
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakInspector.detect(options: .environmentVariableChecks, environment: environment)
-  })
+  }
 }
 
 private func makeEnvironment(
@@ -356,15 +356,5 @@ private func captureDetectionError(_ operation: () throws -> Void) -> JailbreakD
   } catch {
     Issue.record("Expected JailbreakDetectionError, got \(error)")
     return nil
-  }
-}
-
-private func runsSuccessfully(_ operation: () throws -> Void) -> Bool {
-  do {
-    try operation()
-    return true
-  } catch {
-    Issue.record("Expected operation to succeed, got \(error)")
-    return false
   }
 }
