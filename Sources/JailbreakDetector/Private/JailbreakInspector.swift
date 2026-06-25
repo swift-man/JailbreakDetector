@@ -224,6 +224,7 @@ enum JailbreakInspector {
     "MobileSubstrate.dylib",
     "TweakInject.dylib",
     "CydiaSubstrate",
+    "CydiaSubstrate.dylib",
     "SubstrateInserter.dylib",
     "SubstrateBootstrap.dylib",
     "ABypass.dylib",
@@ -265,8 +266,16 @@ enum JailbreakInspector {
   }
 
   private static func suspiciousDynamicLibraryName(in imageName: String) -> String? {
-    let lastPathComponent = URL(fileURLWithPath: imageName).lastPathComponent.lowercased()
+    let lastPathComponent = lastPathComponent(in: imageName).lowercased()
     return suspiciousDynamicLibraryNameLookup[lastPathComponent]
+  }
+
+  private static func lastPathComponent(in path: String) -> String {
+    guard let slashIndex = path.lastIndex(of: "/") else {
+      return path
+    }
+
+    return String(path[path.index(after: slashIndex)...])
   }
 
   private static func loadedDynamicLibraryImageNames() -> [String] {

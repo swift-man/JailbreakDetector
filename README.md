@@ -69,7 +69,7 @@ JailbreakDetector does not use URL scheme checks such as `cydia://`, `sileo://`,
 
 Rootless `/var/jb` symbolic link findings are reported as `suspiciousSymbolicLink` with error code `08`, so telemetry can distinguish symlink-based signals from regular suspicious system paths.
 
-`DYLD_*` environment variable checks are skipped for debug and TestFlight sandbox receipt builds to avoid flagging legitimate development and beta distribution tooling.
+`DYLD_*` environment variable checks are skipped for debug builds to avoid flagging legitimate development tooling. Release and TestFlight builds keep these checks enabled.
 
 ## Release
 

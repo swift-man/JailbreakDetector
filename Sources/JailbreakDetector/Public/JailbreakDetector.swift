@@ -21,12 +21,12 @@ public struct JailbreakDetector: JailbreakDetecting, Sendable {
 
   static func effectiveOptions(
     _ options: JailbreakCheckOptions,
-    isDebugBuild: Bool = Self.isDebugBuild,
-    isSandboxReceipt: Bool = Self.isSandboxReceipt
+    isDebugBuild: Bool = Self.isDebugBuild
   ) -> JailbreakCheckOptions {
     var effectiveOptions = options
-    if isDebugBuild || isSandboxReceipt {
-      // Xcode and TestFlight can expose DYLD_* variables for legitimate tooling.
+    if isDebugBuild {
+      // DEBUG is evaluated for the package target; SwiftPM normally propagates
+      // the consuming app's build configuration to package dependencies.
       effectiveOptions.remove(.environmentVariableChecks)
     }
     return effectiveOptions
@@ -38,9 +38,5 @@ public struct JailbreakDetector: JailbreakDetecting, Sendable {
     #else
     return false
     #endif
-  }
-
-  private static var isSandboxReceipt: Bool {
-    Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
   }
 }

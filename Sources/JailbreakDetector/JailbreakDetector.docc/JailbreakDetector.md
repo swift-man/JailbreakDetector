@@ -6,7 +6,7 @@ A lightweight Swift package for detecting common jailbreak indicators on iOS.
 
 Use JailbreakDetector to run a small set of jailbreak checks before enabling security-sensitive app flows.
 
-The detector skips checks when running in the simulator. On device, the default configuration checks suspicious application paths, suspicious system paths, sandbox write behavior, loaded dynamic libraries, and suspicious runtime environment variables. Environment variable checks are skipped for debug and TestFlight sandbox receipt builds to avoid flagging legitimate development and beta distribution tooling.
+The detector skips checks when running in the simulator. On device, the default configuration checks suspicious application paths, suspicious system paths, sandbox write behavior, loaded dynamic libraries, and suspicious runtime environment variables. Environment variable checks are skipped for debug builds to avoid flagging legitimate development tooling. Release and TestFlight builds keep these checks enabled.
 
 ## Installation
 

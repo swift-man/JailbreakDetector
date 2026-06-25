@@ -63,8 +63,7 @@ func allOptionsIncludeSystemWrite() {
 @Test
 func detectorEffectiveOptionsExcludeEnvironmentVariablesForDebugBuilds() {
   let options = JailbreakDetector.effectiveOptions(.default,
-                                                  isDebugBuild: true,
-                                                  isSandboxReceipt: false)
+                                                  isDebugBuild: true)
 
   #expect(!options.contains(.environmentVariableChecks))
   #expect(options.contains(.filePathChecks))
@@ -73,24 +72,18 @@ func detectorEffectiveOptionsExcludeEnvironmentVariablesForDebugBuilds() {
 }
 
 @Test
-func detectorEffectiveOptionsExcludeEnvironmentVariablesForSandboxReceipts() {
+func detectorEffectiveOptionsKeepEnvironmentVariablesForReleaseBuilds() {
   let options = JailbreakDetector.effectiveOptions(.default,
-                                                  isDebugBuild: false,
-                                                  isSandboxReceipt: true)
-
-  #expect(!options.contains(.environmentVariableChecks))
-  #expect(options.contains(.filePathChecks))
-  #expect(options.contains(.sandboxWrite))
-  #expect(options.contains(.dyldScan))
-}
-
-@Test
-func detectorEffectiveOptionsKeepEnvironmentVariablesForAppStoreBuilds() {
-  let options = JailbreakDetector.effectiveOptions(.default,
-                                                  isDebugBuild: false,
-                                                  isSandboxReceipt: false)
+                                                  isDebugBuild: false)
 
   #expect(options.contains(.environmentVariableChecks))
+}
+
+@Test
+func detectorDetectAcceptsEmptyCustomOptions() {
+  #expect(runsSuccessfully {
+    try JailbreakDetector().detect(options: [])
+  })
 }
 
 @Test
@@ -270,6 +263,19 @@ func dyldScanDetectsSuspiciousLibraryByLastPathComponent() {
   }
 
   #expect(error == .suspiciousDynamicLibrary(name: "FridaGadget.dylib"))
+}
+
+@Test
+func dyldScanDetectsCydiaSubstrateDylib() {
+  let environment = makeEnvironment(loadedImageNames: {
+    ["/Library/MobileSubstrate/DynamicLibraries/CydiaSubstrate.dylib"]
+  })
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .dyldScan, environment: environment)
+  }
+
+  #expect(error == .suspiciousDynamicLibrary(name: "CydiaSubstrate.dylib"))
 }
 
 @Test
