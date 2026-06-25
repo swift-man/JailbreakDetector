@@ -351,6 +351,7 @@ private func runsSuccessfully(_ operation: () throws -> Void) -> Bool {
     try operation()
     return true
   } catch {
+    Issue.record("Expected operation to succeed, got \(error)")
     return false
   }
 }
