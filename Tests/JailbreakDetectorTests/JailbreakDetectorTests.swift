@@ -208,6 +208,24 @@ func filePathChecksPreferSymbolicLinkErrorWhenRootlessPathExists() {
 }
 
 @Test
+func filePathChecksPreferSymbolicLinkErrorWhenRootlessAppPathExists() {
+  let environment = makeEnvironment(
+    fileExists: { path in
+      path == "/var/jb/Applications/Cydia.app"
+    },
+    symbolicLinkDestination: { path in
+      path == "/var/jb" ? "/private/preboot/example/procursus" : nil
+    }
+  )
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
+  }
+
+  #expect(error == .suspiciousSymbolicLink(path: "/var/jb"))
+}
+
+@Test
 func sandboxWriteThrowsWhenWriteSucceeds() {
   let recorder = SandboxWriteRecorder()
   let environment = makeEnvironment(

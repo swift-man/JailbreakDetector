@@ -44,8 +44,8 @@ enum JailbreakInspector {
 
   static func detect(options: JailbreakCheckOptions, environment: Environment = .live) throws {
     if options.contains(.filePathChecks) {
-      try checkSuspiciousAppPaths(environment: environment)
       try checkSuspiciousSymbolicLinks(environment: environment)
+      try checkSuspiciousAppPaths(environment: environment)
       try checkSuspiciousSystemPaths(environment: environment)
       try checkJailbreakFilePaths(environment: environment)
     }
