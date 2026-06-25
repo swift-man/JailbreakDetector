@@ -61,6 +61,32 @@ func allOptionsIncludeSystemWrite() {
 }
 
 @Test
+func detectorEffectiveOptionsExcludeEnvironmentVariablesForDebugBuilds() {
+  let options = JailbreakDetector.effectiveOptions(.default,
+                                                  isDebugBuild: true)
+
+  #expect(!options.contains(.environmentVariableChecks))
+  #expect(options.contains(.filePathChecks))
+  #expect(options.contains(.sandboxWrite))
+  #expect(options.contains(.dyldScan))
+}
+
+@Test
+func detectorEffectiveOptionsKeepEnvironmentVariablesForReleaseBuilds() {
+  let options = JailbreakDetector.effectiveOptions(.default,
+                                                  isDebugBuild: false)
+
+  #expect(options.contains(.environmentVariableChecks))
+}
+
+@Test
+func detectorDetectAcceptsEmptyCustomOptions() {
+  #expect(throws: Never.self) {
+    try JailbreakDetector().detect(options: [])
+  }
+}
+
+@Test
 func jailbreakDetectionErrorDescriptionUsesMessage() {
   let error = JailbreakDetectionError.suspiciousApplication(path: "/Applications/Cydia.app")
 
@@ -145,9 +171,9 @@ func filePathChecksIgnoreGenericSystemShellPath() {
     path == "/bin/sh"
   })
 
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
-  })
+  }
 }
 
 @Test
@@ -168,6 +194,24 @@ func filePathChecksPreferSymbolicLinkErrorWhenRootlessPathExists() {
   let environment = makeEnvironment(
     fileExists: { path in
       path == "/var/jb"
+    },
+    symbolicLinkDestination: { path in
+      path == "/var/jb" ? "/private/preboot/example/procursus" : nil
+    }
+  )
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .filePathChecks, environment: environment)
+  }
+
+  #expect(error == .suspiciousSymbolicLink(path: "/var/jb"))
+}
+
+@Test
+func filePathChecksPreferSymbolicLinkErrorWhenRootlessAppPathExists() {
+  let environment = makeEnvironment(
+    fileExists: { path in
+      path == "/var/jb/Applications/Cydia.app"
     },
     symbolicLinkDestination: { path in
       path == "/var/jb" ? "/private/preboot/example/procursus" : nil
@@ -220,9 +264,9 @@ func sandboxWritePassesWhenWriteFails() {
     }
   )
 
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakInspector.detect(options: .sandboxWrite, environment: environment)
-  })
+  }
   #expect(recorder.removedPath == nil)
 }
 
@@ -240,6 +284,32 @@ func dyldScanDetectsSuspiciousLibraryByLastPathComponent() {
 }
 
 @Test
+func dyldScanDetectsSuspiciousLibraryWithTrailingSlash() {
+  let environment = makeEnvironment(loadedImageNames: {
+    ["/usr/lib/fridagadget.dylib/"]
+  })
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .dyldScan, environment: environment)
+  }
+
+  #expect(error == .suspiciousDynamicLibrary(name: "FridaGadget.dylib"))
+}
+
+@Test
+func dyldScanDetectsCydiaSubstrateDylib() {
+  let environment = makeEnvironment(loadedImageNames: {
+    ["/Library/MobileSubstrate/DynamicLibraries/CydiaSubstrate.dylib"]
+  })
+
+  let error = captureDetectionError {
+    try JailbreakInspector.detect(options: .dyldScan, environment: environment)
+  }
+
+  #expect(error == .suspiciousDynamicLibrary(name: "CydiaSubstrate.dylib"))
+}
+
+@Test
 func dyldScanPassesWhenLoadedLibrariesAreClean() {
   let environment = makeEnvironment(loadedImageNames: {
     [
@@ -248,9 +318,9 @@ func dyldScanPassesWhenLoadedLibrariesAreClean() {
     ]
   })
 
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakInspector.detect(options: .dyldScan, environment: environment)
-  })
+  }
 }
 
 @Test
@@ -272,9 +342,9 @@ func environmentVariableChecksPassWithoutSuspiciousVariables() {
     ["PATH": "/usr/bin"]
   })
 
-  #expect(runsSuccessfully {
+  #expect(throws: Never.self) {
     try JailbreakInspector.detect(options: .environmentVariableChecks, environment: environment)
-  })
+  }
 }
 
 private func makeEnvironment(
@@ -304,14 +374,5 @@ private func captureDetectionError(_ operation: () throws -> Void) -> JailbreakD
   } catch {
     Issue.record("Expected JailbreakDetectionError, got \(error)")
     return nil
-  }
-}
-
-private func runsSuccessfully(_ operation: () throws -> Void) -> Bool {
-  do {
-    try operation()
-    return true
-  } catch {
-    return false
   }
 }

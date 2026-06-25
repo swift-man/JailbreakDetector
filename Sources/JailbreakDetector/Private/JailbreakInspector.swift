@@ -44,8 +44,8 @@ enum JailbreakInspector {
 
   static func detect(options: JailbreakCheckOptions, environment: Environment = .live) throws {
     if options.contains(.filePathChecks) {
-      try checkSuspiciousAppPaths(environment: environment)
       try checkSuspiciousSymbolicLinks(environment: environment)
+      try checkSuspiciousAppPaths(environment: environment)
       try checkSuspiciousSystemPaths(environment: environment)
       try checkJailbreakFilePaths(environment: environment)
     }
@@ -101,7 +101,7 @@ enum JailbreakInspector {
   }
 
   private static func sandboxWriteTest(path: String, environment: Environment) throws {
-    let url = URL(fileURLWithPath: path)
+    let url = URL(fileURLWithPath: path, isDirectory: false)
 
     do {
       try environment.writeString("jailbreak", url)
@@ -224,6 +224,7 @@ enum JailbreakInspector {
     "MobileSubstrate.dylib",
     "TweakInject.dylib",
     "CydiaSubstrate",
+    "CydiaSubstrate.dylib",
     "SubstrateInserter.dylib",
     "SubstrateBootstrap.dylib",
     "ABypass.dylib",
@@ -265,8 +266,22 @@ enum JailbreakInspector {
   }
 
   private static func suspiciousDynamicLibraryName(in imageName: String) -> String? {
-    let lastPathComponent = URL(fileURLWithPath: imageName).lastPathComponent.lowercased()
+    let lastPathComponent = lastPathComponent(in: imageName).lowercased()
     return suspiciousDynamicLibraryNameLookup[lastPathComponent]
+  }
+
+  private static func lastPathComponent(in path: String) -> String {
+    var endIndex = path.endIndex
+    while endIndex > path.startIndex && path[path.index(before: endIndex)] == "/" {
+      endIndex = path.index(before: endIndex)
+    }
+
+    let trimmedPath = path[..<endIndex]
+    guard let slashIndex = trimmedPath.lastIndex(of: "/") else {
+      return String(trimmedPath)
+    }
+
+    return String(trimmedPath[trimmedPath.index(after: slashIndex)...])
   }
 
   private static func loadedDynamicLibraryImageNames() -> [String] {
