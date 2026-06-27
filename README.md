@@ -2,6 +2,7 @@
 ![Badge - Version](https://img.shields.io/badge/Version-0.5.3-1177AA?style=flat-square)
 ![Badge - Swift Package Manager](https://img.shields.io/badge/SPM-compatible-orange?style=flat-square)
 ![Badge - Platform](https://img.shields.io/badge/iOS-v15.0-yellow?style=flat-square)
+![Badge - License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
 # JailbreakDetector
 
@@ -84,3 +85,7 @@ Rootless `/var/jb` symbolic link findings are reported as `suspiciousSymbolicLin
 Current release: `0.5.3`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
+## License
+
+JailbreakDetector is released under the [MIT License](LICENSE).

@@ -4,6 +4,10 @@ All notable changes to JailbreakDetector are documented here.
 
 ## Unreleased
 
+### Added
+
+- Added the MIT license file and README license notice.
+
 ## 0.5.3 - 2026-06-27
 
 ### Added

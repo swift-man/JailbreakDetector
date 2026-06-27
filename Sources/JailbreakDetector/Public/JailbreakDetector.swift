@@ -3,7 +3,7 @@
 //  JailbreakDetector
 //
 //  Created by Gorani on 11/4/25.
-//  Copyright © 2025 Gorani. All rights reserved.
+//  Copyright © 2025 Gorani. Licensed under the MIT License.
 //
 
 import Foundation
