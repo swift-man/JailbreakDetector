@@ -28,15 +28,19 @@ public struct JailbreakCheckOptions: OptionSet, Sendable {
   public static let `default`: JailbreakCheckOptions = [
     .filePathChecks,
     .sandboxWrite,
+    .dyldScan
+  ]
+
+  // Higher-sensitivity preset for apps that accept more false-positive risk.
+  public static let strict: JailbreakCheckOptions = [
+    .filePathChecks,
+    .sandboxWrite,
     .dyldScan,
     .environmentVariableChecks
   ]
 
   public static let all: JailbreakCheckOptions = [
-    .filePathChecks,
-    .sandboxWrite,
-    .systemWrite,
-    .dyldScan,
-    .environmentVariableChecks
+    .strict,
+    .systemWrite
   ]
 }

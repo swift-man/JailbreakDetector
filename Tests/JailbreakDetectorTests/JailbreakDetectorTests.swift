@@ -47,8 +47,17 @@ func defaultOptionsIncludeExpectedChecks() {
   #expect(JailbreakCheckOptions.default.contains(.filePathChecks))
   #expect(JailbreakCheckOptions.default.contains(.sandboxWrite))
   #expect(JailbreakCheckOptions.default.contains(.dyldScan))
-  #expect(JailbreakCheckOptions.default.contains(.environmentVariableChecks))
+  #expect(!JailbreakCheckOptions.default.contains(.environmentVariableChecks))
   #expect(!JailbreakCheckOptions.default.contains(.systemWrite))
+}
+
+@Test
+func strictOptionsIncludeEnvironmentVariableChecks() {
+  #expect(JailbreakCheckOptions.strict.contains(.filePathChecks))
+  #expect(JailbreakCheckOptions.strict.contains(.sandboxWrite))
+  #expect(JailbreakCheckOptions.strict.contains(.dyldScan))
+  #expect(JailbreakCheckOptions.strict.contains(.environmentVariableChecks))
+  #expect(!JailbreakCheckOptions.strict.contains(.systemWrite))
 }
 
 @Test
@@ -62,7 +71,7 @@ func allOptionsIncludeSystemWrite() {
 
 @Test
 func detectorEffectiveOptionsExcludeEnvironmentVariablesForDebugBuilds() {
-  let options = JailbreakDetector.effectiveOptions(.default,
+  let options = JailbreakDetector.effectiveOptions(.strict,
                                                   isDebugBuild: true)
 
   #expect(!options.contains(.environmentVariableChecks))
@@ -73,7 +82,7 @@ func detectorEffectiveOptionsExcludeEnvironmentVariablesForDebugBuilds() {
 
 @Test
 func detectorEffectiveOptionsKeepEnvironmentVariablesForReleaseBuilds() {
-  let options = JailbreakDetector.effectiveOptions(.default,
+  let options = JailbreakDetector.effectiveOptions(.strict,
                                                   isDebugBuild: false)
 
   #expect(options.contains(.environmentVariableChecks))
