@@ -4,6 +4,16 @@ All notable changes to JailbreakDetector are documented here.
 
 ## Unreleased
 
+## 0.5.3 - 2026-06-27
+
+### Added
+
+- Added `JailbreakCheckOptions.strict` for apps that want to opt in to `DYLD_*` environment variable checks.
+
+### Changed
+
+- Removed `DYLD_*` environment variable checks from the default option set to reduce false positives for normal app launches.
+
 ## 0.5.2 - 2026-06-26
 
 ### Fixed
