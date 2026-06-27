@@ -1,5 +1,5 @@
 ![Badge - Swift](https://img.shields.io/badge/Swift-5.9-F05138.svg?style=flat-square&logo=Swift&logoColor=white)
-![Badge - Version](https://img.shields.io/badge/Version-0.5.3-1177AA?style=flat-square)
+![Badge - Version](https://img.shields.io/badge/Version-0.5.4-1177AA?style=flat-square)
 ![Badge - Swift Package Manager](https://img.shields.io/badge/SPM-compatible-orange?style=flat-square)
 ![Badge - Platform](https://img.shields.io/badge/iOS-v15.0-yellow?style=flat-square)
 ![Badge - License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
@@ -24,7 +24,7 @@ https://github.com/swift-man/JailbreakDetector
 Or add it to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.3"))
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.4"))
 ```
 
 Then add `JailbreakDetector` to your target dependencies:
@@ -82,7 +82,7 @@ Rootless `/var/jb` symbolic link findings are reported as `suspiciousSymbolicLin
 
 ## Release
 
-Current release: `0.5.3`
+Current release: `0.5.4`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
