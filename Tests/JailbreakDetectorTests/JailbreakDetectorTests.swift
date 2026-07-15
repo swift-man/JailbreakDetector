@@ -546,6 +546,13 @@ func dyldScanPassesWhenLoadedLibrariesAreClean() {
   }
 }
 
+#if canImport(MachO)
+@Test
+func dynamicLibraryRegistryCapturesLoadedImages() {
+  #expect(!DynamicLibraryImageRegistry.shared.currentImageNames().isEmpty)
+}
+#endif
+
 @Test
 func environmentVariableChecksDetectDyldInjectionVariable() {
   let environment = makeEnvironment(environmentVariables: {

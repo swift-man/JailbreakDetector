@@ -6,9 +6,6 @@
 //  Copyright © 2025 Gorani. Licensed under the MIT License.
 //
 
-#if canImport(MachO)
-import MachO
-#endif
 import Foundation
 
 enum JailbreakInspector {
@@ -321,41 +318,13 @@ enum JailbreakInspector {
   }
 
   private static func suspiciousDynamicLibraryName(in imageName: String) -> String? {
-    let lastPathComponent = lastPathComponent(in: imageName).lowercased()
+    let lastPathComponent = (imageName as NSString).lastPathComponent.lowercased()
     return suspiciousDynamicLibraryNameLookup[lastPathComponent]
-  }
-
-  private static func lastPathComponent(in path: String) -> String {
-    var endIndex = path.endIndex
-    while endIndex > path.startIndex && path[path.index(before: endIndex)] == "/" {
-      endIndex = path.index(before: endIndex)
-    }
-
-    let trimmedPath = path[..<endIndex]
-    guard let slashIndex = trimmedPath.lastIndex(of: "/") else {
-      return String(trimmedPath)
-    }
-
-    return String(trimmedPath[trimmedPath.index(after: slashIndex)...])
   }
 
   private static func loadedDynamicLibraryImageNames() -> [String] {
     #if canImport(MachO)
-    let imageCount = _dyld_image_count()
-    var imageNames: [String] = []
-    imageNames.reserveCapacity(Int(imageCount))
-
-    for index in 0..<imageCount {
-      guard let cString = _dyld_get_image_name(index) else {
-        continue
-      }
-
-      if let imageName = String(validatingUTF8: cString) {
-        imageNames.append(imageName)
-      }
-    }
-
-    return imageNames
+    return DynamicLibraryImageRegistry.shared.currentImageNames()
     #else
     return []
     #endif

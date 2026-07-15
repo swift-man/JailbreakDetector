@@ -11,6 +11,7 @@ All notable changes to JailbreakDetector are documented here.
 - Added async jailbreak detection overloads that run checks outside the caller's executor.
 - Added async option forwarding, main-thread isolation, and error propagation tests.
 - Added cooperative cancellation checks between built-in detection stages and scan candidates.
+- Replaced unsafe dyld image iteration with a callback-backed, thread-safe image registry.
 
 ## 0.5.4 - 2026-06-27
 
