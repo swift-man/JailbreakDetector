@@ -16,16 +16,17 @@ final class DynamicLibraryImageRegistry: @unchecked Sendable {
   static let shared = DynamicLibraryImageRegistry()
 
   private static let installCallbacks: Void = {
-    _dyld_register_func_for_add_image { header, _ in
-      guard let header,
-            let imageName = imageName(for: header) else { return }
-      shared.insert(imageName)
-    }
-
+    // Register removals first so an unload between registrations cannot leave a stale image.
     _dyld_register_func_for_remove_image { header, _ in
       guard let header,
             let imageName = imageName(for: header) else { return }
       shared.remove(imageName)
+    }
+
+    _dyld_register_func_for_add_image { header, _ in
+      guard let header,
+            let imageName = imageName(for: header) else { return }
+      shared.insert(imageName)
     }
   }()
 
