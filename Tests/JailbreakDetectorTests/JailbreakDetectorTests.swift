@@ -113,6 +113,43 @@ private final class CancellationProbe: @unchecked Sendable {
   }
 }
 
+private final class BlockingOperationProbe: @unchecked Sendable {
+  private let condition = NSCondition()
+  private var didStart = false
+  private var canFinish = false
+
+  func runIgnoringCancellation() {
+    condition.lock()
+    didStart = true
+    condition.broadcast()
+
+    while !canFinish {
+      condition.wait()
+    }
+    condition.unlock()
+  }
+
+  func waitUntilStarted() async {
+    while true {
+      if hasStarted() { return }
+      await Task.yield()
+    }
+  }
+
+  func finish() {
+    condition.lock()
+    canFinish = true
+    condition.broadcast()
+    condition.unlock()
+  }
+
+  private func hasStarted() -> Bool {
+    condition.lock()
+    defer { condition.unlock() }
+    return didStart
+  }
+}
+
 @Test
 func defaultOptionsIncludeExpectedChecks() {
   #expect(JailbreakCheckOptions.default.contains(.filePathChecks))
@@ -212,6 +249,24 @@ func asynchronousDetectionHonorsExistingCancellation() async {
     try await task.value
   }
   #expect(detector.options == nil)
+}
+
+@Test
+func asynchronousDetectionChecksCancellationAfterOperationFinishes() async {
+  let probe = BlockingOperationProbe()
+  let task = Task {
+    try await JailbreakAsyncDetectionRunner.run {
+      probe.runIgnoringCancellation()
+    }
+  }
+
+  await probe.waitUntilStarted()
+  task.cancel()
+  probe.finish()
+
+  await #expect(throws: CancellationError.self) {
+    try await task.value
+  }
 }
 
 @Test

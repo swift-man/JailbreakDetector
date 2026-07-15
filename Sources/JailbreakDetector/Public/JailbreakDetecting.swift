@@ -28,6 +28,7 @@ enum JailbreakAsyncDetectionRunner {
 
     try await withTaskCancellationHandler {
       try await task.value
+      try Task.checkCancellation()
     } onCancel: {
       task.cancel()
     }
