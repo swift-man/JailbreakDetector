@@ -4,6 +4,41 @@ import Testing
 
 private struct TestWriteError: Error {}
 
+private enum AsyncDetectionTestError: Error {
+  case expected
+}
+
+private final class AsyncDetectionRecorder: JailbreakDetecting, @unchecked Sendable {
+  private let lock = NSLock()
+  private var _options: JailbreakCheckOptions?
+  private var _didRunOnMainThread: Bool?
+
+  var options: JailbreakCheckOptions? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _options
+  }
+
+  var didRunOnMainThread: Bool? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _didRunOnMainThread
+  }
+
+  func detect(options: JailbreakCheckOptions) throws {
+    lock.lock()
+    defer { lock.unlock() }
+    _options = options
+    _didRunOnMainThread = Thread.isMainThread
+  }
+}
+
+private struct FailingAsyncDetector: JailbreakDetecting {
+  func detect(options: JailbreakCheckOptions) throws {
+    throw AsyncDetectionTestError.expected
+  }
+}
+
 private final class SandboxWriteRecorder: @unchecked Sendable {
   private let lock = NSLock()
   private var _writtenString: String?
@@ -93,6 +128,54 @@ func detectorDetectAcceptsEmptyCustomOptions() {
   #expect(throws: Never.self) {
     try JailbreakDetector().detect(options: [])
   }
+}
+
+@Test
+@MainActor
+func asynchronousDetectionRunsOffTheMainThreadAndForwardsOptions() async throws {
+  let detector = AsyncDetectionRecorder()
+
+  try await detector.detect(options: .strict)
+
+  #expect(detector.options == .strict)
+  #expect(detector.didRunOnMainThread == false)
+}
+
+@Test
+@MainActor
+func asynchronousDetectionUsesDefaultOptions() async throws {
+  let detector = AsyncDetectionRecorder()
+
+  try await detector.detect()
+
+  #expect(detector.options == .default)
+  #expect(detector.didRunOnMainThread == false)
+}
+
+@Test
+func asynchronousDetectionPropagatesErrors() async {
+  let detector = FailingAsyncDetector()
+
+  await #expect(throws: AsyncDetectionTestError.self) {
+    try await detector.detect(options: .default)
+  }
+}
+
+@Test
+func asynchronousDetectionHonorsExistingCancellation() async {
+  let detector = AsyncDetectionRecorder()
+
+  let task = Task {
+    withUnsafeCurrentTask { task in
+      task?.cancel()
+    }
+    try await detector.detect(options: .default)
+  }
+
+  await #expect(throws: CancellationError.self) {
+    try await task.value
+  }
+  #expect(detector.options == nil)
 }
 
 @Test
