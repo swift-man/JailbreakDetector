@@ -19,6 +19,22 @@ public struct JailbreakDetector: JailbreakDetecting, Sendable {
     #endif
   }
 
+  /// Runs jailbreak checks outside the caller's executor and cooperatively stops after cancellation.
+  @available(macOS 10.15, *)
+  public func detect(options: JailbreakCheckOptions) async throws {
+    #if targetEnvironment(simulator)
+    try Task.checkCancellation()
+    #else
+    let effectiveOptions = Self.effectiveOptions(options)
+    try await JailbreakAsyncDetectionRunner.run {
+      try JailbreakInspector.detect(
+        options: effectiveOptions,
+        cancellationCheck: { try Task.checkCancellation() }
+      )
+    }
+    #endif
+  }
+
   static func effectiveOptions(
     _ options: JailbreakCheckOptions,
     isDebugBuild: Bool = Self.isDebugBuild

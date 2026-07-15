@@ -62,7 +62,7 @@ do {
 }
 ```
 
-The async overload runs the existing synchronous checks in a detached task while preserving the caller's priority and forwarding cancellation. Existing `JailbreakDetecting` conformers remain source compatible because the protocol provides this behavior by default.
+The async overload runs the existing synchronous checks in a detached task while preserving the caller's priority and forwarding cancellation. The built-in `JailbreakDetector` cooperatively checks cancellation between detection stages and individual path or dynamic-library candidates. Existing `JailbreakDetecting` conformers remain source compatible because the protocol provides detached execution by default; custom synchronous implementations should check task cancellation internally when they perform long-running work.
 
 To customize checks:
 

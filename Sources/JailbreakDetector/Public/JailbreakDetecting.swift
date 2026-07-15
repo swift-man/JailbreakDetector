@@ -15,6 +15,25 @@ public protocol JailbreakDetecting: Sendable {
   func detect(options: JailbreakCheckOptions) async throws
 }
 
+@available(macOS 10.15, *)
+enum JailbreakAsyncDetectionRunner {
+  /// Runs synchronous detection outside the caller's executor and forwards task cancellation.
+  static func run(_ operation: @escaping @Sendable () throws -> Void) async throws {
+    try Task.checkCancellation()
+
+    let task = Task.detached(priority: Task.currentPriority) {
+      try Task.checkCancellation()
+      try operation()
+    }
+
+    try await withTaskCancellationHandler {
+      try await task.value
+    } onCancel: {
+      task.cancel()
+    }
+  }
+}
+
 public extension JailbreakDetecting {
   /// Runs the default jailbreak checks synchronously on the current thread.
   func detect() throws {
@@ -36,18 +55,9 @@ public extension JailbreakDetecting {
   /// - Parameter options: The checks to perform.
   @available(macOS 10.15, *)
   func detect(options: JailbreakCheckOptions) async throws {
-    try Task.checkCancellation()
-
     let detector = self
-    let task = Task.detached(priority: Task.currentPriority) {
-      try Task.checkCancellation()
+    try await JailbreakAsyncDetectionRunner.run {
       try detector.detect(options: options)
-    }
-
-    try await withTaskCancellationHandler {
-      try await task.value
-    } onCancel: {
-      task.cancel()
     }
   }
 }

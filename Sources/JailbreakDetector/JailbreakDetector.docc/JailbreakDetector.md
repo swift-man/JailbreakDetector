@@ -20,7 +20,7 @@ JailbreakDetector supports iOS 15.0 and later.
 
 ## Usage
 
-Create a detector and call ``JailbreakDetector/detect(options:)``.
+Create a ``JailbreakDetector`` and call `detect(options:)`.
 
 ```swift
 import JailbreakDetector
@@ -42,7 +42,7 @@ Use the async overload in app-launch and main-actor flows so file-system checks 
 try await detector.detect()
 ```
 
-The async overload preserves the same options and errors as synchronous detection.
+The async overload preserves the same options and errors as synchronous detection. The built-in detector cooperatively checks cancellation between detection stages and individual path or dynamic-library candidates.
 
 ## Custom Checks
 

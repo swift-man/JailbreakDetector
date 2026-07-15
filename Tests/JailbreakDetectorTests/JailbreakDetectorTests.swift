@@ -77,6 +77,42 @@ private final class SandboxWriteRecorder: @unchecked Sendable {
   }
 }
 
+private final class CancellationProbe: @unchecked Sendable {
+  private let lock = NSLock()
+  private var _fileExistsCallCount = 0
+  private var isCancellationRequested = false
+
+  var fileExistsCallCount: Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return _fileExistsCallCount
+  }
+
+  func checkCancellation() throws {
+    lock.lock()
+    let shouldCancel = isCancellationRequested
+    lock.unlock()
+
+    if shouldCancel {
+      throw CancellationError()
+    }
+  }
+
+  func requestCancellation() {
+    lock.lock()
+    defer { lock.unlock() }
+    isCancellationRequested = true
+  }
+
+  func fileExists(at path: String) -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    _fileExistsCallCount += 1
+    isCancellationRequested = true
+    return false
+  }
+}
+
 @Test
 func defaultOptionsIncludeExpectedChecks() {
   #expect(JailbreakCheckOptions.default.contains(.filePathChecks))
@@ -176,6 +212,46 @@ func asynchronousDetectionHonorsExistingCancellation() async {
     try await task.value
   }
   #expect(detector.options == nil)
+}
+
+@Test
+func inspectorStopsFilePathScanAfterCancellation() {
+  let probe = CancellationProbe()
+  let environment = makeEnvironment(fileExists: { path in
+    probe.fileExists(at: path)
+  })
+
+  #expect(throws: CancellationError.self) {
+    try JailbreakInspector.detect(options: .filePathChecks,
+                                  environment: environment,
+                                  cancellationCheck: { try probe.checkCancellation() })
+  }
+
+  #expect(probe.fileExistsCallCount == 1)
+}
+
+@Test
+func inspectorRemovesSuccessfulProbeFileWhenCancellationArrives() {
+  let probe = CancellationProbe()
+  let recorder = SandboxWriteRecorder()
+  let environment = makeEnvironment(
+    writeString: { string, url in
+      recorder.recordWrite(string, url: url)
+      probe.requestCancellation()
+    },
+    removeItem: { url in
+      recorder.recordRemoval(url: url)
+    }
+  )
+
+  #expect(throws: CancellationError.self) {
+    try JailbreakInspector.detect(options: .sandboxWrite,
+                                  environment: environment,
+                                  cancellationCheck: { try probe.checkCancellation() })
+  }
+
+  #expect(recorder.writtenPath != nil)
+  #expect(recorder.removedPath == recorder.writtenPath)
 }
 
 @Test
