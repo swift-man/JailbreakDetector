@@ -6,12 +6,11 @@
 //  Copyright © 2025 Gorani. Licensed under the MIT License.
 //
 
-#if canImport(MachO)
-import MachO
-#endif
 import Foundation
 
 enum JailbreakInspector {
+  typealias CancellationCheck = @Sendable () throws -> Void
+
   struct Environment: Sendable {
     let fileExists: @Sendable (String) -> Bool
     let symbolicLinkDestination: @Sendable (String) -> String?
@@ -42,65 +41,107 @@ enum JailbreakInspector {
     )
   }
 
-  static func detect(options: JailbreakCheckOptions, environment: Environment = .live) throws {
+  static func detect(
+    options: JailbreakCheckOptions,
+    environment: Environment = .live,
+    cancellationCheck: CancellationCheck = {}
+  ) throws {
+    try cancellationCheck()
+
     if options.contains(.filePathChecks) {
-      try checkSuspiciousSymbolicLinks(environment: environment)
-      try checkSuspiciousAppPaths(environment: environment)
-      try checkSuspiciousSystemPaths(environment: environment)
-      try checkJailbreakFilePaths(environment: environment)
+      try cancellationCheck()
+      try checkSuspiciousSymbolicLinks(environment: environment,
+                                       cancellationCheck: cancellationCheck)
+      try checkSuspiciousAppPaths(environment: environment,
+                                  cancellationCheck: cancellationCheck)
+      try checkSuspiciousSystemPaths(environment: environment,
+                                     cancellationCheck: cancellationCheck)
+      try checkJailbreakFilePaths(environment: environment,
+                                  cancellationCheck: cancellationCheck)
     }
 
     if options.contains(.sandboxWrite) {
-      try sandboxWriteTest(path: "/private/\(UUID().uuidString)", environment: environment)
+      try cancellationCheck()
+      try sandboxWriteTest(path: "/private/\(UUID().uuidString)",
+                           environment: environment,
+                           cancellationCheck: cancellationCheck)
     }
 
     if options.contains(.systemWrite) {
-      try sandboxWriteTest(path: "/jb_sys_\(UUID().uuidString)", environment: environment)
+      try cancellationCheck()
+      try sandboxWriteTest(path: "/jb_sys_\(UUID().uuidString)",
+                           environment: environment,
+                           cancellationCheck: cancellationCheck)
     }
 
     if options.contains(.dyldScan) {
-      try checkLoadedDynamicLibraries(environment: environment)
+      try cancellationCheck()
+      try checkLoadedDynamicLibraries(environment: environment,
+                                      cancellationCheck: cancellationCheck)
     }
 
     if options.contains(.environmentVariableChecks) {
-      try checkSuspiciousEnvironmentVariables(environment: environment)
+      try cancellationCheck()
+      try checkSuspiciousEnvironmentVariables(environment: environment,
+                                               cancellationCheck: cancellationCheck)
     }
   }
 
   // MARK: - Checks
-  private static func checkSuspiciousAppPaths(environment: Environment) throws {
+  private static func checkSuspiciousAppPaths(
+    environment: Environment,
+    cancellationCheck: CancellationCheck
+  ) throws {
     for path in suspiciousAppPaths {
+      try cancellationCheck()
       if environment.fileExists(path) {
         throw JailbreakDetectionError.suspiciousApplication(path: path)
       }
     }
   }
 
-  private static func checkSuspiciousSystemPaths(environment: Environment) throws {
+  private static func checkSuspiciousSystemPaths(
+    environment: Environment,
+    cancellationCheck: CancellationCheck
+  ) throws {
     for path in suspiciousSystemPaths {
+      try cancellationCheck()
       if environment.fileExists(path) {
         throw JailbreakDetectionError.suspiciousSystemPath(path: path)
       }
     }
   }
 
-  private static func checkJailbreakFilePaths(environment: Environment) throws {
+  private static func checkJailbreakFilePaths(
+    environment: Environment,
+    cancellationCheck: CancellationCheck
+  ) throws {
     for path in jailbreakFilePaths {
+      try cancellationCheck()
       if environment.fileExists(path) {
         throw JailbreakDetectionError.suspiciousFile(path: path)
       }
     }
   }
 
-  private static func checkSuspiciousSymbolicLinks(environment: Environment) throws {
+  private static func checkSuspiciousSymbolicLinks(
+    environment: Environment,
+    cancellationCheck: CancellationCheck
+  ) throws {
     for path in suspiciousSymbolicLinkPaths {
+      try cancellationCheck()
       if environment.symbolicLinkDestination(path) != nil {
         throw JailbreakDetectionError.suspiciousSymbolicLink(path: path)
       }
     }
   }
 
-  private static func sandboxWriteTest(path: String, environment: Environment) throws {
+  private static func sandboxWriteTest(
+    path: String,
+    environment: Environment,
+    cancellationCheck: CancellationCheck
+  ) throws {
+    try cancellationCheck()
     let url = URL(fileURLWithPath: path, isDirectory: false)
 
     do {
@@ -110,13 +151,19 @@ enum JailbreakInspector {
     }
 
     defer { try? environment.removeItem(url) }
+    try cancellationCheck()
     throw JailbreakDetectionError.sandboxWriteSucceeded(path: path)
   }
 
-  private static func checkSuspiciousEnvironmentVariables(environment: Environment) throws {
+  private static func checkSuspiciousEnvironmentVariables(
+    environment: Environment,
+    cancellationCheck: CancellationCheck
+  ) throws {
+    try cancellationCheck()
     let environmentVariables = environment.environmentVariables()
 
     for variableName in suspiciousEnvironmentVariableNames {
+      try cancellationCheck()
       if environmentVariables[variableName] != nil {
         throw JailbreakDetectionError.suspiciousEnvironmentVariable(name: variableName)
       }
@@ -257,8 +304,13 @@ enum JailbreakInspector {
     uniquingKeysWith: { first, _ in first }
   )
 
-  private static func checkLoadedDynamicLibraries(environment: Environment) throws {
+  private static func checkLoadedDynamicLibraries(
+    environment: Environment,
+    cancellationCheck: CancellationCheck
+  ) throws {
+    try cancellationCheck()
     for imageName in environment.loadedImageNames() {
+      try cancellationCheck()
       if let libraryName = suspiciousDynamicLibraryName(in: imageName) {
         throw JailbreakDetectionError.suspiciousDynamicLibrary(name: libraryName)
       }
@@ -266,41 +318,13 @@ enum JailbreakInspector {
   }
 
   private static func suspiciousDynamicLibraryName(in imageName: String) -> String? {
-    let lastPathComponent = lastPathComponent(in: imageName).lowercased()
+    let lastPathComponent = (imageName as NSString).lastPathComponent.lowercased()
     return suspiciousDynamicLibraryNameLookup[lastPathComponent]
-  }
-
-  private static func lastPathComponent(in path: String) -> String {
-    var endIndex = path.endIndex
-    while endIndex > path.startIndex && path[path.index(before: endIndex)] == "/" {
-      endIndex = path.index(before: endIndex)
-    }
-
-    let trimmedPath = path[..<endIndex]
-    guard let slashIndex = trimmedPath.lastIndex(of: "/") else {
-      return String(trimmedPath)
-    }
-
-    return String(trimmedPath[trimmedPath.index(after: slashIndex)...])
   }
 
   private static func loadedDynamicLibraryImageNames() -> [String] {
     #if canImport(MachO)
-    let imageCount = _dyld_image_count()
-    var imageNames: [String] = []
-    imageNames.reserveCapacity(Int(imageCount))
-
-    for index in 0..<imageCount {
-      guard let cString = _dyld_get_image_name(index) else {
-        continue
-      }
-
-      if let imageName = String(validatingUTF8: cString) {
-        imageNames.append(imageName)
-      }
-    }
-
-    return imageNames
+    return DynamicLibraryImageRegistry.shared.currentImageNames()
     #else
     return []
     #endif

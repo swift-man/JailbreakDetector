@@ -1,5 +1,5 @@
 ![Badge - Swift](https://img.shields.io/badge/Swift-5.9-F05138.svg?style=flat-square&logo=Swift&logoColor=white)
-![Badge - Version](https://img.shields.io/badge/Version-0.5.4-1177AA?style=flat-square)
+![Badge - Version](https://img.shields.io/badge/Version-0.5.5-1177AA?style=flat-square)
 ![Badge - Swift Package Manager](https://img.shields.io/badge/SPM-compatible-orange?style=flat-square)
 ![Badge - Platform](https://img.shields.io/badge/iOS-v15.0-yellow?style=flat-square)
 ![Badge - License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
@@ -24,7 +24,7 @@ https://github.com/swift-man/JailbreakDetector
 Or add it to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.4"))
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.5"))
 ```
 
 Then add `JailbreakDetector` to your target dependencies:
@@ -51,6 +51,18 @@ do {
   print("Jailbreak detection failed: \(error)")
 }
 ```
+
+Use the async overload from main-actor or app-launch flows to run file-system and runtime checks without blocking the caller's executor:
+
+```swift
+do {
+  try await detector.detect()
+} catch let error as JailbreakDetectionError {
+  print("Jailbreak detected: \(error.code), \(error.message)")
+}
+```
+
+The async overload runs the existing synchronous checks in a detached task while preserving the caller's priority and forwarding cancellation. The built-in `JailbreakDetector` cooperatively checks cancellation between detection stages and individual path or dynamic-library candidates. Existing `JailbreakDetecting` conformers remain source compatible because the protocol provides detached execution by default; custom synchronous implementations should check task cancellation internally when they perform long-running work.
 
 To customize checks:
 
@@ -82,7 +94,7 @@ Rootless `/var/jb` symbolic link findings are reported as `suspiciousSymbolicLin
 
 ## Release
 
-Current release: `0.5.4`
+Current release: `0.5.5`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

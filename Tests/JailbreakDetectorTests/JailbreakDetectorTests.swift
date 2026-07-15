@@ -4,6 +4,41 @@ import Testing
 
 private struct TestWriteError: Error {}
 
+private enum AsyncDetectionTestError: Error {
+  case expected
+}
+
+private final class AsyncDetectionRecorder: JailbreakDetecting, @unchecked Sendable {
+  private let lock = NSLock()
+  private var _options: JailbreakCheckOptions?
+  private var _didRunOnMainThread: Bool?
+
+  var options: JailbreakCheckOptions? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _options
+  }
+
+  var didRunOnMainThread: Bool? {
+    lock.lock()
+    defer { lock.unlock() }
+    return _didRunOnMainThread
+  }
+
+  func detect(options: JailbreakCheckOptions) throws {
+    lock.lock()
+    defer { lock.unlock() }
+    _options = options
+    _didRunOnMainThread = Thread.isMainThread
+  }
+}
+
+private struct FailingAsyncDetector: JailbreakDetecting {
+  func detect(options: JailbreakCheckOptions) throws {
+    throw AsyncDetectionTestError.expected
+  }
+}
+
 private final class SandboxWriteRecorder: @unchecked Sendable {
   private let lock = NSLock()
   private var _writtenString: String?
@@ -39,6 +74,79 @@ private final class SandboxWriteRecorder: @unchecked Sendable {
     lock.lock()
     defer { lock.unlock() }
     _removedPath = url.path
+  }
+}
+
+private final class CancellationProbe: @unchecked Sendable {
+  private let lock = NSLock()
+  private var _fileExistsCallCount = 0
+  private var isCancellationRequested = false
+
+  var fileExistsCallCount: Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return _fileExistsCallCount
+  }
+
+  func checkCancellation() throws {
+    lock.lock()
+    let shouldCancel = isCancellationRequested
+    lock.unlock()
+
+    if shouldCancel {
+      throw CancellationError()
+    }
+  }
+
+  func requestCancellation() {
+    lock.lock()
+    defer { lock.unlock() }
+    isCancellationRequested = true
+  }
+
+  func fileExists(at path: String) -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    _fileExistsCallCount += 1
+    isCancellationRequested = true
+    return false
+  }
+}
+
+private final class BlockingOperationProbe: @unchecked Sendable {
+  private let condition = NSCondition()
+  private var didStart = false
+  private var canFinish = false
+
+  func runIgnoringCancellation() {
+    condition.lock()
+    didStart = true
+    condition.broadcast()
+
+    while !canFinish {
+      condition.wait()
+    }
+    condition.unlock()
+  }
+
+  func waitUntilStarted() async {
+    while true {
+      if hasStarted() { return }
+      await Task.yield()
+    }
+  }
+
+  func finish() {
+    condition.lock()
+    canFinish = true
+    condition.broadcast()
+    condition.unlock()
+  }
+
+  private func hasStarted() -> Bool {
+    condition.lock()
+    defer { condition.unlock() }
+    return didStart
   }
 }
 
@@ -93,6 +201,112 @@ func detectorDetectAcceptsEmptyCustomOptions() {
   #expect(throws: Never.self) {
     try JailbreakDetector().detect(options: [])
   }
+}
+
+@Test
+@MainActor
+func asynchronousDetectionRunsOffTheMainThreadAndForwardsOptions() async throws {
+  let detector = AsyncDetectionRecorder()
+
+  try await detector.detect(options: .strict)
+
+  #expect(detector.options == .strict)
+  #expect(detector.didRunOnMainThread == false)
+}
+
+@Test
+@MainActor
+func asynchronousDetectionUsesDefaultOptions() async throws {
+  let detector = AsyncDetectionRecorder()
+
+  try await detector.detect()
+
+  #expect(detector.options == .default)
+  #expect(detector.didRunOnMainThread == false)
+}
+
+@Test
+func asynchronousDetectionPropagatesErrors() async {
+  let detector = FailingAsyncDetector()
+
+  await #expect(throws: AsyncDetectionTestError.self) {
+    try await detector.detect(options: .default)
+  }
+}
+
+@Test
+func asynchronousDetectionHonorsExistingCancellation() async {
+  let detector = AsyncDetectionRecorder()
+
+  let task = Task {
+    withUnsafeCurrentTask { task in
+      task?.cancel()
+    }
+    try await detector.detect(options: .default)
+  }
+
+  await #expect(throws: CancellationError.self) {
+    try await task.value
+  }
+  #expect(detector.options == nil)
+}
+
+@Test
+func asynchronousDetectionChecksCancellationAfterOperationFinishes() async {
+  let probe = BlockingOperationProbe()
+  let task = Task {
+    try await JailbreakAsyncDetectionRunner.run {
+      probe.runIgnoringCancellation()
+    }
+  }
+
+  await probe.waitUntilStarted()
+  task.cancel()
+  probe.finish()
+
+  await #expect(throws: CancellationError.self) {
+    try await task.value
+  }
+}
+
+@Test
+func inspectorStopsFilePathScanAfterCancellation() {
+  let probe = CancellationProbe()
+  let environment = makeEnvironment(fileExists: { path in
+    probe.fileExists(at: path)
+  })
+
+  #expect(throws: CancellationError.self) {
+    try JailbreakInspector.detect(options: .filePathChecks,
+                                  environment: environment,
+                                  cancellationCheck: { try probe.checkCancellation() })
+  }
+
+  #expect(probe.fileExistsCallCount == 1)
+}
+
+@Test
+func inspectorRemovesSuccessfulProbeFileWhenCancellationArrives() {
+  let probe = CancellationProbe()
+  let recorder = SandboxWriteRecorder()
+  let environment = makeEnvironment(
+    writeString: { string, url in
+      recorder.recordWrite(string, url: url)
+      probe.requestCancellation()
+    },
+    removeItem: { url in
+      recorder.recordRemoval(url: url)
+    }
+  )
+
+  #expect(throws: CancellationError.self) {
+    try JailbreakInspector.detect(options: .sandboxWrite,
+                                  environment: environment,
+                                  cancellationCheck: { try probe.checkCancellation() })
+  }
+
+  #expect(recorder.writtenPath != nil)
+  #expect(recorder.removedPath == recorder.writtenPath)
 }
 
 @Test
@@ -331,6 +545,13 @@ func dyldScanPassesWhenLoadedLibrariesAreClean() {
     try JailbreakInspector.detect(options: .dyldScan, environment: environment)
   }
 }
+
+#if canImport(MachO)
+@Test
+func dynamicLibraryRegistryCapturesLoadedImages() {
+  #expect(!DynamicLibraryImageRegistry.shared.currentImageNames().isEmpty)
+}
+#endif
 
 @Test
 func environmentVariableChecksDetectDyldInjectionVariable() {

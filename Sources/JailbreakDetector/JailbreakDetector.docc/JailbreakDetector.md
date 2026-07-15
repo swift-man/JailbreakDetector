@@ -13,14 +13,14 @@ The detector skips checks when running in the simulator. On device, the default 
 Add JailbreakDetector as a Swift Package dependency:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.4"))
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.5"))
 ```
 
 JailbreakDetector supports iOS 15.0 and later.
 
 ## Usage
 
-Create a detector and call ``JailbreakDetector/detect(options:)``.
+Create a ``JailbreakDetector`` and call `detect(options:)`.
 
 ```swift
 import JailbreakDetector
@@ -35,6 +35,14 @@ do {
   print("Jailbreak detection failed: \(error)")
 }
 ```
+
+Use the async overload in app-launch and main-actor flows so file-system checks do not block the caller's executor:
+
+```swift
+try await detector.detect()
+```
+
+The async overload preserves the same options and errors as synchronous detection. The built-in detector cooperatively checks cancellation between detection stages and individual path or dynamic-library candidates.
 
 ## Custom Checks
 
@@ -56,7 +64,7 @@ Rootless `/var/jb` symbolic link findings are reported as ``JailbreakDetectionEr
 
 ## Version
 
-The current release is 0.5.4.
+The current release is 0.5.5.
 
 ## Topics
 
