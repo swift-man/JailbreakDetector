@@ -16,8 +16,8 @@ All notable changes to JailbreakDetector are documented here.
 
 ### Changed
 
-- Added a Swift 6.1 versioned package manifest for the optional Firebase Analytics
-  product while keeping the Swift 5.9 core package dependency-free.
+- Made Swift tools 6.1 the default manifest for the optional Firebase Analytics
+  product and added a Swift 5.9 versioned fallback that keeps the core dependency-free.
 - Raised the Firebase iOS SDK minimum to 12.14.0.
 - Replaced the Firebase internal default-app name check with `FirebaseApp.app()`.
 - Documented the consuming app's `-ObjC` linker requirement and DebugView validation.
