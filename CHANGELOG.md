@@ -4,6 +4,19 @@ All notable changes to JailbreakDetector are documented here.
 
 ## Unreleased
 
+### Added
+
+- Added the optional `JailbreakDetectorFirebaseAnalytics` product for standardized
+  `jailbreak_launch_blocked` reporting.
+- Added stable `reason_code`, `reason_message`, `app_version`, and `build_number`
+  Firebase Analytics parameters.
+- Added safeguards that skip reporting until the consuming app configures Firebase.
+
+### Changed
+
+- Declared macOS 10.15 as the package's minimum macOS platform so the optional
+  Firebase Analytics product can be built and tested by SwiftPM.
+
 ## 0.5.5 - 2026-07-15
 
 ### Added

@@ -36,6 +36,10 @@ Then add `JailbreakDetector` to your target dependencies:
 )
 ```
 
+Apps that use Firebase Analytics can also add the optional
+`JailbreakDetectorFirebaseAnalytics` product. The core `JailbreakDetector`
+target remains independent from Firebase.
+
 ## Usage
 
 ```swift
@@ -81,6 +85,42 @@ Use `.all` only when your app should also run the more aggressive system write p
 ```swift
 try detector.detect(options: .all)
 ```
+
+## Firebase Analytics
+
+The optional Firebase Analytics product standardizes launch-block telemetry across apps.
+Configure Firebase once in the consuming app before running launch checks:
+
+```swift
+import FirebaseCore
+
+FirebaseApp.configure()
+```
+
+Report a detected jailbreak from the app-launch flow:
+
+```swift
+import JailbreakDetector
+import JailbreakDetectorFirebaseAnalytics
+
+do {
+  try await JailbreakDetector().detect(options: .strict)
+} catch let error as JailbreakDetectionError {
+  JailbreakFirebaseAnalyticsReporter().reportLaunchBlocked(error)
+  throw error
+}
+```
+
+The reporter sends `jailbreak_launch_blocked` with these parameters:
+
+- `reason_code`
+- `reason_message`
+- `app_version`
+- `build_number`
+
+The reporter does not configure Firebase and does not send anything before a default
+`FirebaseApp` has been configured. This allows Firebase Remote Config, Analytics, and
+other Firebase products in the host app to share one Firebase lifecycle.
 
 The `.sandboxWrite` and `.systemWrite` checks intentionally attempt writes outside the app sandbox. Failed writes are expected on non-jailbroken devices, but they can create diagnostic or crash-reporting noise in some production telemetry. If that is a problem for your app, pass a custom option set that omits those checks.
 
