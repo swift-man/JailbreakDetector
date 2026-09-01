@@ -4,6 +4,8 @@ All notable changes to JailbreakDetector are documented here.
 
 ## Unreleased
 
+## 0.5.6 - 2026-09-01
+
 ### Added
 
 - Added the optional `JailbreakDetectorFirebaseAnalytics` product for standardized
@@ -14,8 +16,11 @@ All notable changes to JailbreakDetector are documented here.
 
 ### Changed
 
-- Declared macOS 10.15 as the package's minimum macOS platform so the optional
-  Firebase Analytics product can be built and tested by SwiftPM.
+- Added a Swift 6.1 versioned package manifest for the optional Firebase Analytics
+  product while keeping the Swift 5.9 core package dependency-free.
+- Raised the Firebase iOS SDK minimum to 12.14.0.
+- Replaced the Firebase internal default-app name check with `FirebaseApp.app()`.
+- Documented the consuming app's `-ObjC` linker requirement and DebugView validation.
 
 ## 0.5.5 - 2026-07-15
 

@@ -1,5 +1,5 @@
 ![Badge - Swift](https://img.shields.io/badge/Swift-5.9-F05138.svg?style=flat-square&logo=Swift&logoColor=white)
-![Badge - Version](https://img.shields.io/badge/Version-0.5.5-1177AA?style=flat-square)
+![Badge - Version](https://img.shields.io/badge/Version-0.5.6-1177AA?style=flat-square)
 ![Badge - Swift Package Manager](https://img.shields.io/badge/SPM-compatible-orange?style=flat-square)
 ![Badge - Platform](https://img.shields.io/badge/iOS-v15.0-yellow?style=flat-square)
 ![Badge - License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
@@ -24,7 +24,7 @@ https://github.com/swift-man/JailbreakDetector
 Or add it to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.5"))
+.package(url: "https://github.com/swift-man/JailbreakDetector", .upToNextMinor(from: "0.5.6"))
 ```
 
 Then add `JailbreakDetector` to your target dependencies:
@@ -38,7 +38,8 @@ Then add `JailbreakDetector` to your target dependencies:
 
 Apps that use Firebase Analytics can also add the optional
 `JailbreakDetectorFirebaseAnalytics` product. The core `JailbreakDetector`
-target remains independent from Firebase.
+target remains dependency-free and compatible with Swift 5.9. The Firebase adapter
+is available when the consuming toolchain supports Swift 6.1 or later.
 
 ## Usage
 
@@ -89,6 +90,11 @@ try detector.detect(options: .all)
 ## Firebase Analytics
 
 The optional Firebase Analytics product standardizes launch-block telemetry across apps.
+It requires Swift 6.1 or later and Firebase iOS SDK 12.14.0 or later. Add
+`JailbreakDetectorFirebaseAnalytics` to the consuming app target, then add `-ObjC`
+to that target's **Other Linker Flags** so Firebase Analytics Objective-C categories
+are linked correctly.
+
 Configure Firebase once in the consuming app before running launch checks:
 
 ```swift
@@ -122,6 +128,14 @@ The reporter does not configure Firebase and does not send anything before a def
 `FirebaseApp` has been configured. This allows Firebase Remote Config, Analytics, and
 other Firebase products in the host app to share one Firebase lifecycle.
 
+To verify delivery in Firebase DebugView:
+
+1. Add `-FIRDebugEnabled` to the app scheme's launch arguments.
+2. Trigger a launch block and confirm `jailbreak_launch_blocked` includes
+   `reason_code`, `reason_message`, `app_version`, and `build_number`.
+3. Remove the debug argument after verification, or launch once with
+   `-FIRDebugDisabled`.
+
 The `.sandboxWrite` and `.systemWrite` checks intentionally attempt writes outside the app sandbox. Failed writes are expected on non-jailbroken devices, but they can create diagnostic or crash-reporting noise in some production telemetry. If that is a problem for your app, pass a custom option set that omits those checks.
 
 The default option set avoids `.environmentVariableChecks` to keep normal app launches at a lower false-positive risk. In debug builds, `.environmentVariableChecks` is removed even when it is included in a custom option set. Release and TestFlight builds honor the option as passed.
@@ -134,7 +148,7 @@ Rootless `/var/jb` symbolic link findings are reported as `suspiciousSymbolicLin
 
 ## Release
 
-Current release: `0.5.5`
+Current release: `0.5.6`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

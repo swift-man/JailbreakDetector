@@ -61,8 +61,6 @@ public protocol JailbreakLaunchAnalyticsReporting {
 
 /// Sends jailbreak launch-block events to the configured default Firebase app.
 public struct JailbreakFirebaseAnalyticsReporter: JailbreakLaunchAnalyticsReporting {
-  private static let defaultFirebaseAppName = "__FIRAPP_DEFAULT"
-
   private let bundle: Bundle
   private let isFirebaseConfigured: () -> Bool
   private let logEvent: (String, [String: String]) -> Void
@@ -71,16 +69,12 @@ public struct JailbreakFirebaseAnalyticsReporter: JailbreakLaunchAnalyticsReport
   public init(bundle: Bundle = .main) {
     self.bundle = bundle
     isFirebaseConfigured = {
-      FirebaseApp.allApps?.values.contains {
-        $0.name == Self.defaultFirebaseAppName
-      } == true
+      FirebaseApp.app() != nil
     }
     logEvent = { name, parameters in
       Analytics.logEvent(
         name,
-        parameters: parameters.reduce(into: [String: Any]()) { result, parameter in
-          result[parameter.key] = parameter.value
-        }
+        parameters: parameters as [String: Any]
       )
     }
   }

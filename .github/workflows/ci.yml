@@ -5,8 +5,27 @@ on:
   pull_request:
 
 jobs:
+  core-compatibility:
+    name: Core (Swift 5)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Select Xcode 15.4
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Test dependency-free core package
+        run: swift test
+
   test:
-    name: Test
+    name: Firebase adapter (Swift 6)
     runs-on: macos-15
 
     steps:
@@ -18,8 +37,14 @@ jobs:
           swift --version
           xcodebuild -version
 
+      - name: Resolve minimum supported Firebase SDK
+        run: swift package resolve firebase-ios-sdk --version 12.14.0
+
       - name: Run Swift Testing
         run: swift test
 
       - name: Build iOS package
         run: xcodebuild -scheme JailbreakDetector -destination 'generic/platform=iOS' build
+
+      - name: Build Firebase adapter for iOS
+        run: xcodebuild -scheme JailbreakDetectorFirebaseAnalytics -destination 'generic/platform=iOS' OTHER_LDFLAGS=-ObjC build
