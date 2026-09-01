@@ -90,11 +90,40 @@ final class JailbreakFirebaseAnalyticsReporterTests: XCTestCase {
       "Suspicious environment variable exists: DYLD_INSERT_LIBRARIES"
     )
   }
+
+  func testReporterUsesInjectedBundleMetadata() {
+    let loggedEvent = LockedBox<LoggedEvent?>(nil)
+    let reporter = JailbreakFirebaseAnalyticsReporter(
+      bundle: StubBundle(),
+      isFirebaseConfigured: { true },
+      logEvent: { name, parameters in
+        loggedEvent.update { $0 = LoggedEvent(name: name, parameters: parameters) }
+      }
+    )
+
+    reporter.reportLaunchBlocked(.suspiciousFile(path: "/var/jb"))
+
+    XCTAssertEqual(loggedEvent.current?.parameters["app_version"], "9.9.9")
+    XCTAssertEqual(loggedEvent.current?.parameters["build_number"], "777")
+  }
 }
 
 private struct LoggedEvent {
   let name: String
   let parameters: [String: String]
+}
+
+private final class StubBundle: Bundle, @unchecked Sendable {
+  override func object(forInfoDictionaryKey key: String) -> Any? {
+    switch key {
+    case "CFBundleShortVersionString":
+      return "9.9.9"
+    case "CFBundleVersion":
+      return "777"
+    default:
+      return nil
+    }
+  }
 }
 
 private final class LockedBox<Value>: @unchecked Sendable {
