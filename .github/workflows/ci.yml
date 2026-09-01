@@ -25,12 +25,15 @@ jobs:
         run: swift build
 
   test:
-    name: Firebase adapter (Swift 6)
+    name: Firebase adapter (Swift tools 6.1+)
     runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
 
       - name: Show toolchain
         run: |

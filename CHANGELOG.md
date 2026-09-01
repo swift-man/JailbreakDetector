@@ -4,7 +4,7 @@ All notable changes to JailbreakDetector are documented here.
 
 ## Unreleased
 
-## 0.5.6 - 2026-09-01
+## 0.5.6 - 2026-09-02
 
 ### Added
 
