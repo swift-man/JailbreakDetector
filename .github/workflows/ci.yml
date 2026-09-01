@@ -6,15 +6,24 @@ on:
 
 jobs:
   core-compatibility:
-    name: Core (Swift 5)
-    runs-on: macos-14
+    name: Core (${{ matrix.toolchain }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - toolchain: Swift 5.10
+            runner: macos-14
+            xcode: /Applications/Xcode_15.4.app/Contents/Developer
+          - toolchain: Swift 6.0
+            runner: macos-15
+            xcode: /Applications/Xcode_16.2.app/Contents/Developer
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Select Xcode 15.4
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+      - name: Select Xcode
+        run: sudo xcode-select -s "${{ matrix.xcode }}"
 
       - name: Show toolchain
         run: |
