@@ -40,14 +40,19 @@ jobs:
           swift --version
           xcodebuild -version
 
-      - name: Resolve minimum supported Firebase SDK
-        run: swift package resolve --version 12.14.0 firebase-ios-sdk
-
       - name: Run Swift Testing
         run: swift test
+
+      - name: Build minimum Firebase consumer
+        working-directory: Tests/Fixtures/FirebaseMinimum
+        run: swift build
 
       - name: Build iOS package
         run: xcodebuild -scheme JailbreakDetector -destination 'generic/platform=iOS' build
 
       - name: Build Firebase adapter for iOS
         run: xcodebuild -scheme JailbreakDetectorFirebaseAnalytics -destination 'generic/platform=iOS' OTHER_LDFLAGS=-ObjC build
+
+      - name: Build minimum Firebase consumer for iOS
+        working-directory: Tests/Fixtures/FirebaseMinimum
+        run: xcodebuild -scheme FirebaseMinimumConsumer -destination 'generic/platform=iOS' OTHER_LDFLAGS=-ObjC build
