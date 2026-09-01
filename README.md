@@ -38,9 +38,10 @@ Then add `JailbreakDetector` to your target dependencies:
 
 Apps that use Firebase Analytics can also add the optional
 `JailbreakDetectorFirebaseAnalytics` product. The core `JailbreakDetector`
-target remains dependency-free and compatible with Swift 5.9. The Firebase adapter
-is available when the consuming toolchain supports Swift tools 6.1 manifests,
-such as Xcode 26 or later.
+target remains dependency-free and compatible with Swift 5.9. The Swift 5.9
+fallback manifest does not resolve Firebase. Toolchains that use the default Swift
+tools 6.1 manifest resolve Firebase at the package level even when an app links only
+the core product.
 
 ## Usage
 
@@ -91,8 +92,8 @@ try detector.detect(options: .all)
 ## Firebase Analytics
 
 The optional Firebase Analytics product standardizes launch-block telemetry across apps.
-It requires Swift tools 6.1 manifest support (Xcode 26 or later) and Firebase iOS SDK
-12.14.0 or later. Add
+It requires Xcode 26.2 or later and Firebase iOS SDK 12.14.0 up to, but not including,
+13.0.0. Add
 `JailbreakDetectorFirebaseAnalytics` to the consuming app target, then add `-ObjC`
 to that target's **Other Linker Flags** so Firebase Analytics Objective-C categories
 are linked correctly.
