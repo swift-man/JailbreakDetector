@@ -20,6 +20,9 @@ All notable changes to JailbreakDetector are documented here.
   product and added a Swift 5.9 versioned fallback that keeps the core dependency-free.
 - Raised the Firebase iOS SDK minimum to 12.14.0.
 - Replaced the Firebase internal default-app name check with `FirebaseApp.app()`.
+- Made the public analytics reporter protocol and reporter `Sendable`.
+- Normalized the random sandbox probe path and limited every event parameter value
+  to Firebase Analytics' 100-character limit.
 - Documented the consuming app's `-ObjC` linker requirement and DebugView validation.
 
 ## 0.5.5 - 2026-07-15

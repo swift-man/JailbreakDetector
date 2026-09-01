@@ -130,6 +130,8 @@ The reporter sends `jailbreak_launch_blocked` with these parameters:
 The reporter does not configure Firebase and does not send anything before a default
 `FirebaseApp` has been configured. This allows Firebase Remote Config, Analytics, and
 other Firebase products in the host app to share one Firebase lifecycle.
+Firebase queues events asynchronously, so present a launch-blocked UI instead of
+terminating the process immediately after reporting.
 
 To verify delivery in Firebase DebugView:
 

@@ -33,8 +33,8 @@ public struct JailbreakLaunchAnalyticsEvent: Equatable, Sendable {
     buildNumber: String
   ) {
     parameters = [
-      "reason_code": error.code,
-      "reason_message": String(error.message.prefix(Self.maximumParameterStringLength)),
+      "reason_code": Self.limitedValue(error.code),
+      "reason_message": Self.limitedValue(Self.stableMessage(for: error)),
       "app_version": Self.nonEmptyValue(appVersion),
       "build_number": Self.nonEmptyValue(buildNumber)
     ]
@@ -49,21 +49,32 @@ public struct JailbreakLaunchAnalyticsEvent: Equatable, Sendable {
           !value.isEmpty else {
       return "unknown"
     }
-    return value
+    return limitedValue(value)
+  }
+
+  private static func limitedValue(_ value: String) -> String {
+    String(value.prefix(maximumParameterStringLength))
+  }
+
+  private static func stableMessage(for error: JailbreakDetectionError) -> String {
+    if case .sandboxWriteSucceeded = error {
+      return "Sandbox write check succeeded"
+    }
+    return error.message
   }
 }
 
 /// Reports jailbreak launch blocks without coupling the launch flow to Firebase APIs.
-public protocol JailbreakLaunchAnalyticsReporting {
+public protocol JailbreakLaunchAnalyticsReporting: Sendable {
   /// Reports a jailbreak error that caused the app launch to be blocked.
   func reportLaunchBlocked(_ error: JailbreakDetectionError)
 }
 
 /// Sends jailbreak launch-block events to the configured default Firebase app.
-public struct JailbreakFirebaseAnalyticsReporter: JailbreakLaunchAnalyticsReporting {
+public struct JailbreakFirebaseAnalyticsReporter: JailbreakLaunchAnalyticsReporting, Sendable {
   private let bundle: Bundle
-  private let isFirebaseConfigured: () -> Bool
-  private let logEvent: (String, [String: String]) -> Void
+  private let isFirebaseConfigured: @Sendable () -> Bool
+  private let logEvent: @Sendable (String, [String: String]) -> Void
 
   /// Creates a reporter using the default Firebase app and the supplied app bundle.
   public init(bundle: Bundle = .main) {
@@ -81,8 +92,8 @@ public struct JailbreakFirebaseAnalyticsReporter: JailbreakLaunchAnalyticsReport
 
   init(
     bundle: Bundle = .main,
-    isFirebaseConfigured: @escaping () -> Bool,
-    logEvent: @escaping (String, [String: String]) -> Void
+    isFirebaseConfigured: @escaping @Sendable () -> Bool,
+    logEvent: @escaping @Sendable (String, [String: String]) -> Void
   ) {
     self.bundle = bundle
     self.isFirebaseConfigured = isFirebaseConfigured

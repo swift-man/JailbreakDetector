@@ -24,48 +24,96 @@ final class JailbreakFirebaseAnalyticsReporterTests: XCTestCase {
     let longPath = "/" + String(repeating: "a", count: 200)
     let event = JailbreakLaunchAnalyticsEvent(
       error: .suspiciousFile(path: longPath),
+      appVersion: String(repeating: "1", count: 200),
+      buildNumber: String(repeating: "2", count: 200)
+    )
+
+    for value in event.parameters.values {
+      XCTAssertLessThanOrEqual(
+        value.count,
+        JailbreakLaunchAnalyticsEvent.maximumParameterStringLength
+      )
+    }
+  }
+
+  func testEventUsesFallbackForEmptyBundleValues() {
+    let event = JailbreakLaunchAnalyticsEvent(
+      error: .suspiciousFile(path: "/var/jb"),
       appVersion: "",
       buildNumber: "  "
     )
 
-    XCTAssertEqual(
-      event.parameters["reason_message"]?.count,
-      JailbreakLaunchAnalyticsEvent.maximumParameterStringLength
-    )
     XCTAssertEqual(event.parameters["app_version"], "unknown")
     XCTAssertEqual(event.parameters["build_number"], "unknown")
   }
 
+  func testEventNormalizesRandomSandboxProbePath() {
+    let event = JailbreakLaunchAnalyticsEvent(
+      error: .sandboxWriteSucceeded(path: "/private/123E4567-E89B-12D3-A456-426614174000"),
+      appVersion: "1.2.3",
+      buildNumber: "45"
+    )
+
+    XCTAssertEqual(
+      event.parameters["reason_message"],
+      "Sandbox write check succeeded"
+    )
+  }
+
   func testReporterDoesNotLogBeforeFirebaseIsConfigured() {
-    var loggedEventCount = 0
+    let loggedEventCount = LockedBox(0)
     let reporter = JailbreakFirebaseAnalyticsReporter(
       isFirebaseConfigured: { false },
-      logEvent: { _, _ in loggedEventCount += 1 }
+      logEvent: { _, _ in loggedEventCount.update { $0 += 1 } }
     )
 
     reporter.reportLaunchBlocked(.suspiciousSystemPath(path: "/private/preboot"))
 
-    XCTAssertEqual(loggedEventCount, 0)
+    XCTAssertEqual(loggedEventCount.current, 0)
   }
 
   func testReporterLogsAfterFirebaseIsConfigured() {
-    var loggedName: String?
-    var loggedParameters: [String: String]?
+    let loggedEvent = LockedBox<LoggedEvent?>(nil)
     let reporter = JailbreakFirebaseAnalyticsReporter(
       isFirebaseConfigured: { true },
       logEvent: { name, parameters in
-        loggedName = name
-        loggedParameters = parameters
+        loggedEvent.update { $0 = LoggedEvent(name: name, parameters: parameters) }
       }
     )
 
     reporter.reportLaunchBlocked(.suspiciousEnvironmentVariable(name: "DYLD_INSERT_LIBRARIES"))
 
-    XCTAssertEqual(loggedName, "jailbreak_launch_blocked")
-    XCTAssertEqual(loggedParameters?["reason_code"], "07")
+    XCTAssertEqual(loggedEvent.current?.name, "jailbreak_launch_blocked")
+    XCTAssertEqual(loggedEvent.current?.parameters["reason_code"], "07")
     XCTAssertEqual(
-      loggedParameters?["reason_message"],
+      loggedEvent.current?.parameters["reason_message"],
       "Suspicious environment variable exists: DYLD_INSERT_LIBRARIES"
     )
+  }
+}
+
+private struct LoggedEvent {
+  let name: String
+  let parameters: [String: String]
+}
+
+private final class LockedBox<Value>: @unchecked Sendable {
+  private let lock = NSLock()
+  private var value: Value
+
+  init(_ value: Value) {
+    self.value = value
+  }
+
+  var current: Value {
+    lock.lock()
+    defer { lock.unlock() }
+    return value
+  }
+
+  func update(_ body: (inout Value) -> Void) {
+    lock.lock()
+    defer { lock.unlock() }
+    body(&value)
   }
 }
