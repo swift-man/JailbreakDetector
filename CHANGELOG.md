@@ -4,6 +4,27 @@ All notable changes to JailbreakDetector are documented here.
 
 ## Unreleased
 
+## 0.5.6 - 2026-09-02
+
+### Added
+
+- Added the optional `JailbreakDetectorFirebaseAnalytics` product for standardized
+  `jailbreak_launch_blocked` reporting.
+- Added stable `reason_code`, `reason_message`, `app_version`, and `build_number`
+  Firebase Analytics parameters.
+- Added safeguards that skip reporting until the consuming app configures Firebase.
+
+### Changed
+
+- Made Swift tools 6.1 the default manifest for the optional Firebase Analytics
+  product and added a Swift 5.9 versioned fallback that keeps the core dependency-free.
+- Raised the Firebase iOS SDK minimum to 12.14.0.
+- Replaced the Firebase internal default-app name check with `FirebaseApp.app()`.
+- Made the public analytics reporter protocol and reporter `Sendable`.
+- Normalized the random sandbox probe path and limited every event parameter value
+  to Firebase Analytics' 100-character limit.
+- Documented the consuming app's `-ObjC` linker requirement and DebugView validation.
+
 ## 0.5.5 - 2026-07-15
 
 ### Added

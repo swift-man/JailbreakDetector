@@ -5,13 +5,44 @@ on:
   pull_request:
 
 jobs:
+  core-compatibility:
+    name: Core (${{ matrix.toolchain }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - toolchain: Swift 5.10
+            runner: macos-14
+            xcode: /Applications/Xcode_15.4.app/Contents/Developer
+          - toolchain: Swift 6.0
+            runner: macos-15
+            xcode: /Applications/Xcode_16.2.app/Contents/Developer
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "${{ matrix.xcode }}"
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Build dependency-free core package
+        run: swift build
+
   test:
-    name: Test
+    name: Firebase adapter (Swift tools 6.1+)
     runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
 
       - name: Show toolchain
         run: |
@@ -21,5 +52,16 @@ jobs:
       - name: Run Swift Testing
         run: swift test
 
+      - name: Build minimum Firebase consumer
+        working-directory: Tests/Fixtures/FirebaseMinimum
+        run: swift build
+
       - name: Build iOS package
         run: xcodebuild -scheme JailbreakDetector -destination 'generic/platform=iOS' build
+
+      - name: Build Firebase adapter for iOS
+        run: xcodebuild -scheme JailbreakDetectorFirebaseAnalytics -destination 'generic/platform=iOS' OTHER_LDFLAGS=-ObjC build
+
+      - name: Build minimum Firebase consumer for iOS
+        working-directory: Tests/Fixtures/FirebaseMinimum
+        run: xcodebuild -scheme FirebaseMinimumConsumer -destination 'generic/platform=iOS' OTHER_LDFLAGS=-ObjC build
